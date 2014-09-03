@@ -1,5 +1,12 @@
 import re
 from collections import defaultdict
+from nltk.stem.porter import PorterStemmer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans 
+from sklearn.decomposition import PCA
+import string
+import re
+import numpy as np
 
 class Review:
     '''Review class, which contains all information about a single review'''
@@ -89,6 +96,16 @@ def removeDuplicates(dataDict):
     for k, reviews in dataDict.iteritems():
         dataDict[k] = list(set(reviews))
 
+def removeTextTimeDuplicates(dataDict):
+    '''Given a dictionary of the form {any key -> [reviews]} removes duplicate reviews from the review lists, where duplicate is defined by identical timestamp and review text. If your dictionary is keyed on users, this method will remove all duplicate reviews in the dataset by the same user.'''
+    for k, reviews in dataDict.iteritems():
+        remove = []
+        for i in range(len(reviews)):
+            for j in range(i+1, len(reviews)):
+                if reviews[i].text == reviews[j].text and reviews[i].time == reviews[j].time:
+                    remove.append(i)
+        dataDict[k] = [dataDict[k][i] for i in range(len(dataDict[k])) if i not in remove]
+
 def writeToFile(dataDict, outfilename):
     '''Given a dictionary of the form {any key -> [reviews]} writes all the reviews in the dictionary to the specified output file.'''
     outFile = open(outfilename, 'w')
@@ -97,12 +114,42 @@ def writeToFile(dataDict, outfilename):
             outFile.write(r.asFileString() + "\n")
     outFile.close()
 
+def tokenize(myString, stemmer=None):
+    '''Given a string, returns a list of tokens from that string'''
+    exclude = set(string.punctuation)
+    myString = ''.join(ch for ch in myString if ch not in exclude).lower()
+    if stemmer != None:
+        myString = ' '.join([stemmer.stem(word) for word in myString.split(" ")])
+    myString = re.sub(' +', ' ', myString)
+    return myString.split(' ')
+
 
 def main():
-    reviews = getUserDictionary("foods.txt")
+    reviews = getReviewDictionary("foods.txt")
     removeDuplicates(reviews)
-    outfile = "noduplicates.txt"
-    writeToFile(reviews, outfile)
+    removeTextTimeDuplicates(reviews)
+    
+    ### REQUIRED FEATURES
+    n = 1 #number of top reviews to consider
+    clusterObject = KMeans(8) #Must be able to call .fit_transform(matrix) on this obj
+
+    ### OPTIONAL FEATURES
+    stemObject = PorterStemmer() #Must be able to call .stem(string) on this obj
+    dimReduceObject = None #Must be able to call .fit_transform(matrix) on this obj
+
+    #Getting the top n most reviewed items...
+    mostReviewed = sorted(reviews, key=lambda k: -len(reviews[k]))[:n]
+    for popItem in mostReviewed:
+        tfidfer = TfidfVectorizer(tokenizer = lambda s: tokenize(s, stemObject),
+                                  stop_words = 'english',
+                                  dtype = np.float32, decode_error = 'ignore')
+        reviewTexts = [r.text for r in reviews[popItem]]
+        tfidfMatrix = tfidfer.fit_transform(reviewTexts).toarray()
+        if dimReduceObject is not None:
+            print "Reducing data dimension"
+            tfidfMatrix = dimReduceObject.fit_transform(tfidfMatrix)
+        clusterMatrix = clusterObject.fit_transform(tfidfMatrix)
+        print np.min(clusterMatrix.flatten())
 
 
 if __name__ == "__main__":
