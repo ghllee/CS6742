@@ -4,6 +4,7 @@ from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans 
 from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 import string
 import re
 import numpy as np
@@ -130,26 +131,57 @@ def main():
     removeTextTimeDuplicates(reviews)
     
     ### REQUIRED FEATURES
-    n = 1 #number of top reviews to consider
-    clusterObject = KMeans(8) #Must be able to call .fit_transform(matrix) on this obj
+    n = 15 #number of top reviews to consider
+    clusterObject = KMeans(10) #Must be able to call .fit_transform(matrix) on this obj
 
     ### OPTIONAL FEATURES
     stemObject = PorterStemmer() #Must be able to call .stem(string) on this obj
-    dimReduceObject = None #Must be able to call .fit_transform(matrix) on this obj
+    dimReduceObject = PCA(n_components=200) #Must be able to call .fit_transform(matrix) on this obj
 
     #Getting the top n most reviewed items...
-    mostReviewed = sorted(reviews, key=lambda k: -len(reviews[k]))[:n]
+    #get the item with the most "helpful" reviews
+    mostReviewed = sorted(reviews, key=lambda k: -sum([r.helpfulness[1]!=0 for r in reviews[k]]))[:n]
+    itemCounter = 0
     for popItem in mostReviewed:
+        outFile = open(str(itemCounter) + '.csv' , 'w')
+
         tfidfer = TfidfVectorizer(tokenizer = lambda s: tokenize(s, stemObject),
                                   stop_words = 'english',
                                   dtype = np.float32, decode_error = 'ignore')
         reviewTexts = [r.text for r in reviews[popItem]]
         tfidfMatrix = tfidfer.fit_transform(reviewTexts).toarray()
         if dimReduceObject is not None:
-            print "Reducing data dimension"
             tfidfMatrix = dimReduceObject.fit_transform(tfidfMatrix)
+        
+        
         clusterMatrix = clusterObject.fit_transform(tfidfMatrix)
-        print np.min(clusterMatrix.flatten())
+        
+        for i in range(len(reviews[popItem])):
+            curReview = reviews[popItem][i]
+            minDist = np.min(clusterMatrix[i, :])
+            helpful = 0
+            if curReview.helpfulness[1] == 0:
+                pass
+            else:
+                helpRatio = float(curReview.helpfulness[0])/curReview.helpfulness[1]
+                if helpRatio > .5: helpful = 1
+
+            outFile.write(str(minDist) + "," + str(helpful) + "\n")
+        
+        outFile.close()
+        itemCounter += 1
+
+
+        #plt.plot(range(1, 101), scores)
+        #plt.xlabel('Number of cluster centers, k')
+        #plt.ylabel('Score (higher is a better clustering')
+        #plt.title('K Means\' k versus total clustering score, with PCA dims=200')
+        #plt.show()
+        
+
+
+        #clusterMatrix = clusterObject.fit_transform(tfidfMatrix)
+        #print np.min(clusterMatrix.flatten())
 
 
 if __name__ == "__main__":
