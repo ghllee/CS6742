@@ -2,9 +2,12 @@ import re
 from collections import defaultdict
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans 
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
 import string
 import re
 import numpy as np
@@ -125,40 +128,135 @@ def tokenize(myString, stemmer=None):
     return myString.split(' ')
 
 
+def getTfidfMatrix(reviewList,
+                   tokenizeMethod = tokenize,
+                   stemObject = None,
+                   dimReduceObject = None):
+    '''Given a list of reviews, a method of tokenizing objects (which can, optionally, take as a second argument a stem object), (optionally) an object that stemps tokens, and (optionally) an object that reduces the dimensionality of matricies, returns a tfidf matrix of dimension (numDocs x numFeatures (which is either the size of the vocabulary, or the number of dimensions the dimReduceObject used))'''
+
+    if stemObject is not None:
+        tokenizeMethod = lambda s: tokenize(s, stemObject)
+
+    tfidfer = TfidfVectorizer(tokenizer = tokenizeMethod,
+                                  stop_words = 'english',
+                                  dtype = np.float32, decode_error = 'ignore')
+    documentList = [r.text for r in reviewList]
+    tfidfMatrix = tfidfer.fit_transform(documentList).toarray()
+    if dimReduceObject is not None:
+        tfidfMatrix = dimReduceObject.fit_transform(tfidfMatrix)
+    return tfidfMatrix
+
+def constrainedKMeans(numClusters, data, minPercent = .1):
+    '''Given the number of clusters you want, and the minimum proportion of the data that is allowed to be in a single cluster, returns the cluster centers, assignments for each datapoint, and the distance of each point to each center.'''
+    
+    additionalClusters = 0
+    done = False
+    while not done:
+        curNumClusters = numClusters + additionalClusters
+
+        kMeansObj = KMeans(curNumClusters)
+        curPredictions = kMeansObj.fit_predict(data)
+
+        #Maps from classification number -> list of indices of points in that class
+        classificationDict = {}
+        for i in range(curNumClusters):
+            #Don't know why np.where returns a tuple...
+            classificationDict[i] = np.where(curPredictions == i)[0]
+
+        #Reassign additionalClusters of the smallest clusters to get to numClusters
+        for i in range(additionalClusters):
+            minCluster = min(classificationDict.items(), key = lambda x: len(x[1]))[0]
+            minDist = 999999999
+            minDistCluster = -1
+            for k, v in classificationDict.iteritems():
+                if minCluster == k: continue
+                dist = np.linalg.norm(np.mean(data[v,:], axis=0)
+                                  - np.mean(data[classificationDict[minCluster],:], axis=0))
+                if dist < minDist:
+                    minDist = dist
+                    minDistCluster = k
+            #merge minDistCluster and minCluster!
+            classificationDict[minDistCluster] = np.append(classificationDict[minDistCluster],
+                                                           classificationDict[minCluster])
+            classificationDict.pop(minCluster)
+
+        minClusterSize = len(min(classificationDict.items(), key = lambda x: len(x[1]))[1])
+        totalPoints = data.shape[0]
+        if float(minClusterSize) / totalPoints > minPercent: done = True
+        additionalClusters += 1
+
+    predictions = np.array([-1 for x in range(data.shape[0])])
+    clusterCenters = np.zeros([numClusters, data.shape[1]])
+    distances = np.zeros([data.shape[0], numClusters])
+    classesWritten = 0
+    for k, v in classificationDict.iteritems():
+        predictions[v] = classesWritten
+        clusterCenters[classesWritten, :] = np.mean(data[v, :], axis=0)
+        classesWritten += 1
+    
+    for i in range(len(predictions)):
+        for j in range(numClusters):
+            distances[i,j] = np.linalg.norm(data[i,:] - clusterCenters[j,:])
+
+    return clusterCenters, predictions, distances
+
+
+
+
+def clusterPlot(tfidfMatrix, outFile = None):
+    ''''''
+    assert tfidfMatrix.shape[1] == 2, "clusters can only be visualized in two dimensions!"
+    #clusterPredictions = clusterObject.fit_predict(tfidfMatrix)
+    
+    centroids, clusterPredictions = constrainedKMeans(2, tfidfMatrix) 
+    numClusters = np.max(clusterPredictions) + 1
+    colors = cm.rainbow(np.linspace(0, 1, numClusters))
+
+    centroids = []
+    for i in range(numClusters):
+        clusterIndices = [t for t in range(len(clusterPredictions))
+                          if clusterPredictions[t] == i]
+        centroids.append(np.mean(tfidfMatrix[clusterIndices,:], axis=0))
+
+    for i in range(len(colors)):
+        plt.scatter(centroids[i][0], centroids[i][1], s = 100, marker='+', color = colors[i])
+    for i in range(len(clusterPredictions)):
+        plt.scatter(tfidfMatrix[i][0], tfidfMatrix[i][1], s = 1,
+                    color = colors[clusterPredictions[i]])
+    plt.title("2-D review clustering")
+    if outFile != None:
+        plt.savefig(outFile)
+    else:
+        plt.show()
+    plt.clf()
+
+
+
 def main():
     reviews = getReviewDictionary("foods.txt")
     removeDuplicates(reviews)
     removeTextTimeDuplicates(reviews)
     
-    ### REQUIRED FEATURES
-    n = 15 #number of top reviews to consider
-    clusterObject = KMeans(10) #Must be able to call .fit_transform(matrix) on this obj
-
-    ### OPTIONAL FEATURES
-    stemObject = PorterStemmer() #Must be able to call .stem(string) on this obj
-    dimReduceObject = PCA(n_components=200) #Must be able to call .fit_transform(matrix) on this obj
+    n = 500 #number of top reviews to consider
 
     #Getting the top n most reviewed items...
     #get the item with the most "helpful" reviews
     mostReviewed = sorted(reviews, key=lambda k: -sum([r.helpfulness[1]!=0 for r in reviews[k]]))[:n]
     itemCounter = 0
+    productIdFile = open("productIds.txt", 'w')
     for popItem in mostReviewed:
-        outFile = open(str(itemCounter) + '.csv' , 'w')
+        productIdFile.write(popItem + '\n')
+        outFile = open("temp/" + str(itemCounter) + '.csv' , 'w')
 
-        tfidfer = TfidfVectorizer(tokenizer = lambda s: tokenize(s, stemObject),
-                                  stop_words = 'english',
-                                  dtype = np.float32, decode_error = 'ignore')
-        reviewTexts = [r.text for r in reviews[popItem]]
-        tfidfMatrix = tfidfer.fit_transform(reviewTexts).toarray()
-        if dimReduceObject is not None:
-            tfidfMatrix = dimReduceObject.fit_transform(tfidfMatrix)
-        
-        
-        clusterMatrix = clusterObject.fit_transform(tfidfMatrix)
+        tfidfMatrix = getTfidfMatrix(reviews[popItem], tokenizeMethod = tokenize,
+                                     stemObject = PorterStemmer(),
+                                     dimReduceObject = PCA(n_components=200))
+
+        centers, predictions, distances = constrainedKMeans(5, tfidfMatrix, minPercent=.05)
         
         for i in range(len(reviews[popItem])):
             curReview = reviews[popItem][i]
-            minDist = np.min(clusterMatrix[i, :])
+            minDist = np.min(distances[i,:])
             helpful = 0
             if curReview.helpfulness[1] == 0:
                 pass
@@ -170,18 +268,9 @@ def main():
         
         outFile.close()
         itemCounter += 1
+        print itemCounter
 
-
-        #plt.plot(range(1, 101), scores)
-        #plt.xlabel('Number of cluster centers, k')
-        #plt.ylabel('Score (higher is a better clustering')
-        #plt.title('K Means\' k versus total clustering score, with PCA dims=200')
-        #plt.show()
-        
-
-
-        #clusterMatrix = clusterObject.fit_transform(tfidfMatrix)
-        #print np.min(clusterMatrix.flatten())
+    productIdFile.close()
 
 
 if __name__ == "__main__":
