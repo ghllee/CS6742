@@ -20,7 +20,7 @@ for(i in 0:(n-1))
 }
 productIds <- read.csv("productIds.txt", header=F)
 plotCI(values, ui=U, li=L, pch=".", xlab = "Review Index", ylab = "Influence of Uniqueness",
-        main = "Influence of Uniqueness on Helpfulness for Top 300 Reviews",
+        main = "Influence of Uniqueness on Helpfulness of Reviews for the Top 300 Products",
         xlim = c(1,300),
         ylim = c(-30, 20))
 meanConfInt <- t.test(values)$conf.int
