@@ -1,6 +1,4 @@
-install.packages("plotrix")
 library(plotrix)
-setwd("./Desktop/NLP/git/A1")
 
 n <- 300
 values <- rep(0, n)
