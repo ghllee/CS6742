@@ -59,11 +59,20 @@ Maithra Raghu
 \end{flushleft}
 
 \section*{Introduction}
-Testing this citation \cite{gilbert2010understanding}.
+What types of information are helpful to communities? The answer to this question undoubtedly depends on community type, size, and structure. Gilbert and Karahlios address this question in the Amazon review setting \cite{gilbert2010understanding} in the context of repetitive reviews. According to the authors, \emph{deja reviews} constitute ``missed oppertunities'' because, when a user posts a review with little to no new content, ``the community [gains] little it did not already know.'' Their study includes interviews with amateur and experienced reviewers, and their findings indicate that, while amateur reviewers don't see the merit of a unique review, experienced reviewers take some personal pride in producing ``original'' content. They conclude with the sugguestion that review sites should encourage amateur reviewers to produce unique content by ``[asking] for particular pieces of information.''
+
+While it is clear that there is more unique information about the product contained in unique reviews, it is not obvious that unique reviews are truly more helpful and contribute more to review communities. For instance, it's plausable that a user, concerned with a primary feature of a product, would find an additional review echoing previous sentiments about that particular feature more helpful than a review about a secondary product feature she isn't interested in. Perhaps deja reviews, taken as a whole, are more helpful than reviews with unique content. This idea motivated our research question, ``are unique reviews \emph{actually} considered more helpful?''
+
+Questions about how uniquness relates to helpfulness have been addressed previously. For instance, Danescu-Niculescu-Mizil et al. find that reviews that give star ratings closer to the mean rating for the product are more likely to recieve ``helpful'' votes on Amazon \cite{danescu2009opinions}. In their most successful model, Soo-Min et al. \cite{kim2006automatically} use a set of unigram tfidf features in an SVM regression to predict Amazon review helpfulness, indicating that lexical features do have an effect on helpfulness voting (though they do not report whether or not uniqueness had a positive or negative effect on helpfulness).
 
 \section*{Data and Methods}
+For our analysis, we use a dataset consisting of 500k Amazon ``fine foods'' reviews taken from 2002 to 2012 \cite{mcauley2013amateurs}.
 
-\section*{Reults}
+\section*{Results}
+
+\section*{Conclusions}
+
+Notably, Mudambi et al. find that what makes a review helpful depends strongly on whether the product in question can be classified as a experience good, which cannot be truly evaluated until a consumer has \emph{experienced} it, or search good, which a customer can make most evaluations about prior to purchase \cite{mudambi2010makes}. Because our dataset consisted of the fine foods section of Amazon, most of the products in our dataset constitute experience goods. Consequently, our preliminary results might not extend to datasets that have a higher proportions of search goods.
 
 \bibliography{refs}
 
