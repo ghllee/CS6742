@@ -204,7 +204,7 @@ def constrainedKMeans(numClusters, data, minPercent = .1):
 
 
 def clusterPlot(tfidfMatrix, outFile = None):
-    ''''''
+    ''' '''
     assert tfidfMatrix.shape[1] == 2, "clusters can only be visualized in two dimensions!"
     #clusterPredictions = clusterObject.fit_predict(tfidfMatrix)
     
@@ -238,6 +238,7 @@ def main():
     removeTextTimeDuplicates(reviews)
     
     n = 500 #number of top reviews to consider
+    helpratio = .5 #threshold required before considered "helpful"
 
     #Getting the top n most reviewed items...
     #get the item with the most "helpful" reviews
@@ -262,7 +263,7 @@ def main():
                 pass
             else:
                 helpRatio = float(curReview.helpfulness[0])/curReview.helpfulness[1]
-                if helpRatio > .5: helpful = 1
+                if helpRatio > helpratio: helpful = 1
 
             outFile.write(str(minDist) + "," + str(helpful) + "\n")
         
