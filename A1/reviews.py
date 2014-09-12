@@ -152,8 +152,10 @@ def getTfidfMatrix(reviewList,
     documentList = [r.text for r in reviewList]
     tfidfMatrix = tfidfer.fit_transform(documentList).toarray()
     if dimReduceObject is not None:
-        tfidfMatrix = dimReduceObject.fit_transform(tfidfMatrix)
-    return tfidfMatrix, tfidfer
+        tfidfMatrixCompressed = dimReduceObject.fit_transform(tfidfMatrix)
+    else:
+        tfidfMatrixCompressed = tfidfMatrix
+    return tfidfMatrixCompressed, tfidfMatrix, tfidfer
 
 def constrainedKMeans(numClusters, data, minPercent = .1):
     '''Given the number of clusters you want, and the minimum proportion of the data that is allowed to be in a single cluster, returns the cluster centers, assignments for each datapoint, and the distance of each point to each center.'''
@@ -247,7 +249,7 @@ def main():
     removeTextTimeDuplicates(reviews)
     
     n = 500 #number of top reviews to consider
-    helpratio = .5 #threshold required before considered "helpful"
+    helpratio = .6 #threshold required before considered "helpful"
 
     #Getting the top n most reviewed items...
     #get the item with the most "helpful" reviews
@@ -257,14 +259,15 @@ def main():
     for popItem in mostReviewed:
         productIdFile.write(popItem + '\n')
         outFile = open("temp/" + str(itemCounter) + '.csv' , 'w')
+        outFileTypicalWords = open("temp/" + str(itemCounter) + '.txt' , 'w')
 
-        tfidfMatrix, tfidfObject = getTfidfMatrix(reviews[popItem], tokenizeMethod = tokenize,
-                                     stemObject = None,
-                                     dimReduceObject = PCA(n_components=200))
+        compressed, rawtfidf, tfidfObject = getTfidfMatrix(reviews[popItem],
+                                                           tokenizeMethod = tokenize,
+                                                           stemObject = None,
+                                                           dimReduceObject = PCA(n_components=100))
 
 
-        rawtfidf = tfidfMatrix.copy()
-        centers, predictions, distances = constrainedKMeans(10, tfidfMatrix, minPercent=.03)
+        centers, predictions, distances = constrainedKMeans(10, compressed, minPercent=.03)
         words = tfidfObject.get_feature_names()
         #print words with highest average tfidf per cluster
         for i in range(10):
@@ -276,13 +279,10 @@ def main():
             for j in range(numTop):
                 topIndices = np.append(topIndices, np.where(meanTfidf == top[j])[0])
             topIndices = np.unique(topIndices)
-            print topIndices
-            print "Cluster " + str(i)
+            outFileTypicalWords.write("Cluster " + str(i) + "\n")
             for t in topIndices:
-                print words[t]
-            print
+                outFileTypicalWords.write(words[t] + "\n")
 
-        break
 
         for i in range(len(reviews[popItem])):
             curReview = reviews[popItem][i]
@@ -297,6 +297,7 @@ def main():
             outFile.write(str(minDist) + "," + str(helpful) + "\n")
         
         outFile.close()
+        outFileTypicalWords.close()
         itemCounter += 1
         print itemCounter
 
