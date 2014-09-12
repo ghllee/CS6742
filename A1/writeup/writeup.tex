@@ -121,7 +121,7 @@ water     & try       & wasnt     &     & (NUM)
 \label{tab:clusterex2}
 \end{table}
 
-Figure \ref{fig:result} contains our primary findings. After analyzing the coefficient on uniqueness for each of the 300 product-level logistic regressions, we find that the average coefficient on uniqueness to be $-1.43$ ($p < 10^{-15}$). This is an indication that, based on our uniqueness and helpfulness metrics, lexical uniqueness has a negative influence on helpful voting. 
+Figure \ref{fig:result} contains our primary findings. After analyzing the coefficient on uniqueness for each of the 300 product-level logistic regressions, we find that the average coefficient on uniqueness to be $-1.52$ ($p < 10^{-15}$). This is an indication that, based on our uniqueness and helpfulness metrics, lexical uniqueness has a negative influence on helpful voting. 
 
 \begin{figure}[h!]
   \centering
@@ -130,9 +130,7 @@ Figure \ref{fig:result} contains our primary findings. After analyzing the coeff
   \label{fig:result}
 \end{figure}
 
-
-(WE SHOULD RUN REGRESSIONS WITH DEVIANCE FROM AVERAGE REVIEW SCORE -AND- UNIQUENESS AS PREDICTORS FOR REVIEW HELPFULNESS. IF SOMEONE WANTED TO ADD THIS AND MAYBE ANOTHER GRAPH, THAT WOULD BE REALLY GREAT. ESSENTIALLY, RUN A REGRESSION WITH BOTH HELPFULNESS -AND- REVIEW DEVIANCE FROM MEAN REVIEW SCORE. THIS WILL INVOLVE CHANGING THE OUTPUT OF THE PYTHON SCRIPT VERY SLIGHTLY, SO THAT THIS DATA IS WRITTEN PROPERLY INTO THE OUTPUT CSVs.)
-
+(PARAGRAPH ABOUT SENTIMENT/SCORING) $-1.50$ ($p < 10^{-15}$)
 
 \section*{Conclusions}
 Potentially in contrast to assumptions made by previous authors, we find that uniqueness is a negative predictor of review helpfulness. Though our methods are basic and could most definitely be improved upon, this preliminary result indicates that it is debatable as to whether or not unique reviews are truly more helpful to a community. We believe that the amount of useful information gained by repeating the same important idea again and again might outweigh the benefit of elaboration on secondary product features. We suspect this pattern emerges due to product simplicity. For instance, how many unique features of coconut oil require elaboration?
