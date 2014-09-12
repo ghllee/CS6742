@@ -130,10 +130,11 @@ Figure \ref{fig:result} contains our primary findings. After analyzing the coeff
   \label{fig:result}
 \end{figure}
 
-\subsection{Effect of Scoring Difference on Uniqueness}
+\subsection{Rating differences and Uniqueness}
 
+The results so far indicate that uniqueness is perceived as not being helpful. One important factor for this might be that reviews that are more textually unique according to our analysis also rate the product differently from the majority of reviews. The lower score of helpfulness could then be readers disagreeing with the product rating, instead of the textual content of the review. 
 
-
+We therefore reattempted logistic regression but with compensation for rating difference by subtracting the average rating of the product from the rating of the review that was being analysed. With this, the average coefficient did increase - becoming $-1.50$, but only very marginally. (The original value was $-1.52$.) This suggests that textual content perceived as different is still unhelpful to reviewers.
 
 
 (PARAGRAPH ABOUT SENTIMENT/SCORING) $-1.50$ ($p < 10^{-15}$)
