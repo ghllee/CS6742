@@ -4,6 +4,8 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import string
+from collections import defaultdict
+from scipy.stats import chi2_contingency
 
 class _GetchUnix:
     def __init__(self):
@@ -134,8 +136,8 @@ def basicPlots(projects):
     plt.hist(sorted(prices)[10:-50], bins = 20)
     plt.savefig("prices.png")
 
-def main():
-    projects = loadProjects('output', fileRange = (4,14))
+def labelThings(projects):
+    '''Given a list of projects, have the user label items.'''
     vgs = [x for x in projects if x.category.lower()
            in ["technology","open hardware","board & card games","product design"]]
     toLabel = []
@@ -147,6 +149,61 @@ def main():
             toLabel.append(sortedRewards[1])
     
     rewardLabel(toLabel, "posTechOHBoardProd","negTechOHBoardProd", tokenFile = "tokTechOHBoardProd")
+
+def buildCategoryDictionary(projects):
+    '''Given a list of projects, builds a dictionary that maps from {category -> [p1, p2, p3]} for all projects in the input.'''
+    x = defaultdict(list)
+    for p in projects: x[p.category].append(p)
+    return x
+
+def categoryAltruisticPropTest(projects):
+    '''Given a list of projects, split on category. Then, conduct a proportion test for for each category for proportion of altruistic donations vs not altruistic donations split on success/failure.'''
+    catDict = buildCategoryDictionary(projects)
+    for cat, projectList in catDict.iteritems():
+        if len(cat) == 0: continue
+        success = [x for x in projectList if x.result and x.backers != 0]
+        fail = [x for x in projectList if not x.result and x.backers != 0]
+        sucAlt = sum([x.backers - sum([y.numBackers for y in x.rewards]) for x in success])
+        failAlt = sum([x.backers - sum([y.numBackers for y in x.rewards]) for x in fail])
+        sucTotal = sum([x.backers for x in success])
+        failTotal = sum([x.backers for x in fail])
+
+        chi2, p, dof, ex = chi2_contingency([[sucAlt, failAlt],[sucTotal-sucAlt, failTotal-failAlt]])
+
+        propSuc, propFail = float(sucAlt*1./sucTotal), float(failAlt*1./failTotal)
+        print cat, propSuc, propFail, p
+
+        if propSuc > propFail: print "Greater proportion with successful projects"
+        else: print "Greater proportion with failed projects"
+
+def categoryAltruisticMeanValueTest(projects):
+    '''Given a list of projects, split on category. Then, conduct a basic t-test for mean altruistic donation value over each of the categories split on succss/failure.'''
+    catDict = buildCategoryDictionary(projects)
+    for cat, projectList in catDict.iteritems():
+        if len(cat) == 0: continue
+        success = [x for x in projectList if x.result and x.backers != 0]
+        fail = [x for x in projectList if not x.result and x.backers != 0]
+        #the altruistic values per backer
+        #perBackerSucc = [(x.raised - sum([y.numBackers*y.cost for y in x.rewards]))*1./x.backers
+        #                 for x in success if x.backers != 0]
+        #perBackerFail = [(x.raised - sum([y.numBackers*y.cost for y in x.rewards]))*1./x.backers
+        #                 for x in fail if x.backers != 0]
+
+        totalAltSucc = sum([(x.raised - sum([y.numBackers*y.cost for y in x.rewards]))
+                            for x in success])
+        totalBackersSucc = sum([x.backers for x in success])
+
+        totalAltFail = sum([(x.raised - sum([y.numBackers*y.cost for y in x.rewards]))
+                            for x in fail])
+        totalBackersFail = sum([x.backers for x in fail])
+
+
+        print cat, totalAltSucc/totalBackersSucc, totalAltFail/totalBackersFail
+
+
+def main():
+    projects = loadProjects('output')
+    categoryAltruisticMeanValueTest(projects)
 
 if __name__ == '__main__':
     main()
