@@ -4,8 +4,11 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import string
-from collections import defaultdict
+from collections import defaultdict, Counter
 from scipy.stats import chi2_contingency
+from nltk.corpus import stopwords
+import string
+from sklearn.linear_model import LogisticRegression
 
 class _GetchUnix:
     def __init__(self):
@@ -23,10 +26,10 @@ class _GetchUnix:
         return ch
 getch = _GetchUnix()
 
-def loadProjects(folderName, fileRange = None):
+def loadProjects(folderName, numFiles = None):
     '''Given the name of the folder where the pickled project files are, return a list of the projects contained in those pickled files. Furthermore, if numFiles is not None, return the list containing data from only that number of files.'''
     validFiles = [x for x in os.listdir(folderName) if re.search("^\d+\.pickle$", x) is not None]
-    if fileRange is not None: validFiles = validFiles[fileRange[0]:fileRange[1]]
+    if numFiles is not None: validFiles = validFiles[:numFiles]
     projects = []
     for v in validFiles:
         fileName = folderName + "/" + v
@@ -159,6 +162,11 @@ def buildCategoryDictionary(projects):
 def categoryAltruisticPropTest(projects):
     '''Given a list of projects, split on category. Then, conduct a proportion test for for each category for proportion of altruistic donations vs not altruistic donations split on success/failure.'''
     catDict = buildCategoryDictionary(projects)
+    
+    print '{:>18}  {:>18}  {:>18}  {:>18}'.format("Category",
+                                                  "Alt Ratio Succ",
+                                                  "Alt Ratio Fail",
+                                                  "p-val")
     for cat, projectList in catDict.iteritems():
         if len(cat) == 0: continue
         success = [x for x in projectList if x.result and x.backers != 0]
@@ -171,10 +179,11 @@ def categoryAltruisticPropTest(projects):
         chi2, p, dof, ex = chi2_contingency([[sucAlt, failAlt],[sucTotal-sucAlt, failTotal-failAlt]])
 
         propSuc, propFail = float(sucAlt*1./sucTotal), float(failAlt*1./failTotal)
-        print cat, propSuc, propFail, p
+        
+        print '{:>18}  {:>18.4f}  {:>18.4f}  {:>18.4f}'.format(cat, propSuc, propFail, p)
 
-        if propSuc > propFail: print "Greater proportion with successful projects"
-        else: print "Greater proportion with failed projects"
+        #if propSuc > propFail: print "Greater proportion with successful projects"
+        #else: print "Greater proportion with failed projects"
 
 def categoryAltruisticMeanValueTest(projects):
     '''Given a list of projects, split on category. Then, conduct a basic t-test for mean altruistic donation value over each of the categories split on succss/failure.'''
@@ -200,10 +209,183 @@ def categoryAltruisticMeanValueTest(projects):
 
         print cat, totalAltSucc/totalBackersSucc, totalAltFail/totalBackersFail
 
+def basicStats(projectsIn):
+    '''Given some projects, print out some basic altruistic stats.'''
+    projects = [p for p in projectsIn]
+
+    succ = len([p for p in projects if p.result])
+    fail = len(projects) - succ
+    print "There are {} successful and {} unsuccessful projects".format(succ, fail)
+    
+    numDonations = sum([p.backers for p in projects])
+    numAltruisticDonations = sum([p.backers - sum([y.numBackers for y in p.rewards]) for p in projects])
+    print "The dataset consists of {} dontation events, of which {} are altruistic".format(numDonations, numAltruisticDonations)
+    print "That constitutes {0:.4f} percent of all donations".format(numAltruisticDonations*1./numDonations)
+
+    totalRaised = sum([p.raised for p in projects])
+    totalAltRaised = sum([p.raised - sum([y.numBackers*y.cost for y in p.rewards])
+                         for p in projects])
+    print "The total amount raised is {}. The total altruistic giving is {}".format(totalRaised,
+                                                                                    totalAltRaised)
+    print "That constitutes {0:.4f} percent of all donations".format(totalAltRaised*1./totalRaised)
+
+def penLogisticRegression(featureMatrix, target):
+    '''Given a feature matrix of size |items| x |features| and a binary target vector of length |items|, perform penalized logistic regression of the feature matrix on the target.'''
+    regressor = LogisticRegression(penalty = 'l2', dual=False)
+    regressor.fit(featureMatrix, target)
+    return regressor
+    
+def getCategoryControlFeatures(projects):
+    '''Given a list of projects, return a |projects| x |category| sized binary matrix, representing the encoding of the input project's categories, and list of categories in the order represented.'''
+    catDict = buildCategoryDictionary(projects)
+    returnMatrix = np.zeros([len(projects), len(catDict)], dtype = np.float32)
+    cats = catDict.keys()
+
+    for i in range(len(projects)):
+        returnMatrix[i, cats.index(projects[i].category)] = 1
+    return returnMatrix, cats
+
+
+def getExtraControlFeatures(projects):
+    '''Given a list of projecst, return a |projects| x |features| sized matrix, representing the project control features of interest, and a list of features in the order represented.'''
+
+    features = ['goal','durationDays','numLevels','minPledge','midPledge','maxPledge',
+                'featured', 'video', 'numUpdates','numComments','fbConnect', 'featured',
+                'numFAQ', 'faqAveLen','creatorNumBacked', 'latitude', 'longitude', 
+                'daysSinceEpochStart', 'aveRewardLen', 'summaryLen']
+                
+    returnMatrix = np.zeros([len(projects),len(features)], dtype = np.float32)
+
+    for i in range(len(features)):
+        curFeature = features[i]
+        for j in range(len(projects)):
+            curProject = projects[j]
+            if curFeature == 'goal':
+                returnMatrix[j,i] = curProject.goal
+            elif curFeature == 'durationDays': 
+                returnMatrix[j,i] = curProject.duration
+            elif curFeature == 'numLevels':
+                returnMatrix[j,i] = len(curProject.rewards)
+            elif curFeature == 'minPledge':
+                if len(curProject.rewards) == 0:
+                    returnMatrix[j,i] = 0
+                    continue
+                returnMatrix[j,i] = np.min([x.cost for x in curProject.rewards])
+            elif curFeature == 'midPledge':
+                if len(curProject.rewards) == 0:
+                    returnMatrix[j,i] = 0
+                    continue
+                returnMatrix[j,i] = np.median([x.cost for x in curProject.rewards])
+            elif curFeature == 'maxPledge':
+                if len(curProject.rewards) == 0:
+                    returnMatrix[j,i] = 0
+                    continue
+                returnMatrix[j,i] = np.max([x.cost for x in curProject.rewards])
+            elif curFeature == 'featured':
+                returnMatrix[j,i] = curProject.featured
+            elif curFeature == 'video':
+                returnMatrix[j,i] = curProject.hasVideo
+            elif curFeature == 'numUpdates':
+                returnMatrix[j,i] = curProject.updates
+            elif curFeature == 'numComments':
+                returnMatrix[j,i] = curProject.comments
+            elif curFeature == 'fbConnect':
+                returnMatrix[j,i] = curProject.creatorFacebookConnect
+            elif curFeature == 'featured':
+                returnMatrix[j,i] = curProject.featured
+            elif curFeature == 'numFAQ': 
+                returnMatrix[j,i] = len(curProject.faqs)
+            elif curFeature == 'faqAveLen':
+                if len(curProject.faqs) == 0:
+                    returnMatrix[j,i] = 0
+                    continue
+                returnMatrix[j,i] = sum([len(x.answer)
+                                         for x in curProject.faqs])*1./len(curProject.faqs)
+            elif curFeature == 'creatorNumBacked':
+                returnMatrix[j,i] = curProject.creatorNumBacked
+            elif curFeature == 'latitude':
+                returnMatrix[j,i] = curProject.lat
+            elif curFeature == 'longitude':
+                returnMatrix[j,i] = curProject.lon
+            elif curFeature == 'daysSinceEpochStart':
+                epoch = datetime.utcfromtimestamp(0)
+                numDays = int((curProject.startDate - epoch).days)
+                returnMatrix[j,i] = numDays 
+            elif curFeature == 'aveRewardLen':
+                if len(curProject.rewards) == 0:
+                    returnMatrix[j,i] = 0
+                    continue
+                returnMatrix[j,i] = sum([len(x.text)
+                                         for x in curProject.rewards])*1./len(curProject.rewards)
+            elif curFeature == 'summaryLen':
+                returnMatrix[j,i] = len(curProject.shortText)
+            else:
+                print curFeature + " not a valid feature."
+    
+    return returnMatrix, features
+        
+def extractTextFeatures(projects, minOccur = 30, nGram = 3):
+    '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category.'''
+
+    #dict mapping from category -> set of n grams in that category
+    catGramDict = defaultdict(set)
+    #counter mapping from n-gram -> count
+    nGramCounter = Counter()
+
+    myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
+
+    for n in range(1,nGram+1):
+        print "Extracting " + str(n) + "-grams"
+        for p in projects:
+            nGrams = myGramFun(p.text, n)
+            for g in nGrams: nGramCounter[g] += 1
+            catGramDict[p.category].update(set(nGrams))
+    
+    validGrams = [x for x in set.intersection(*catGramDict.values()) if nGramCounter[x] >= minOccur]
+    validGrams = [v for v in validGrams if not
+                  set.issubset(set(v.split()), set(stopwords.words('english')))] 
+
+    print "Using {} n-grams".format(len(validGrams))
+    
+    returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
+    for i in range(len(projects)):
+        curProject = projects[i]
+        for j in range(len(validGrams)):
+            curGram = validGrams[j]
+            returnMatrix[i,j] += projects[i].text.count(curGram)
+    
+    return returnMatrix, validGrams
+
+
+def getNGrams(stringIn, n, toLower = True, removePunct = False):
+    '''Given an input string, an "n" in n-gram, whether or not we should lowercase, whether or not we should remove punct, and a list of stopwords (None of remove none), return a list of strings representing those n-grams. Might contain repeats.'''
+    if toLower: stringIn = stringIn.lower()
+    exclude = set(string.punctuation)
+    if removePunct: stringIn = ''.join(ch for ch in stringIn if ch not in exclude)
+    tokens = stringIn.split()
+    
+    returnList = []
+    for i in range(len(tokens)-n+1): returnList.append(' '.join(tokens[i:i+n]))
+    return returnList
 
 def main():
     projects = loadProjects('output')
-    categoryAltruisticMeanValueTest(projects)
+    projects = [p for p in projects if len(p.category) != 0]
+    basicStats(projects)
+    
+    featureMatrix1, ngrams = extractTextFeatures(projects)
+    featureMatrix2, cats = getCategoryControlFeatures(projects)
+    featureMatrix3, controls = getExtraControlFeatures(projects)
+    featureMatrix4, success = np.array([p.result == 1 for p in projects], dtype = np.int), ['success']
+
+    data = np.concatenate([featureMatrix1, featureMatrix2, featureMatrix3, featureMatrix4], axis = 1)
+    headers = np.concatenate([ngrams, cats, controls, success])
+
+    with open('success.csv', 'wb') as f:
+        headerString = ','.join(headers)[:-1]
+        f.write(headerString + "\n")
+        np.savetxt(f, data, delimiter=",")
+
 
 if __name__ == '__main__':
     main()

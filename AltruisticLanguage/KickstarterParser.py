@@ -26,8 +26,18 @@ class Project:
         self.shortText = ""
         self.text = ""
         self.comments = -1
-        #0 is not funded, 1 is funded
         self.result = -1
+        self.updates = -1
+        #this one needs to start at as F, because if a tag exists, then yes,
+        #if if it doesn't exist, then no. It's easier to just start it at 0.
+        self.creatorFacebookConnect = 0 
+        #same with this one
+        self.featured = 0
+
+        self.creatorNumBacked = -1
+
+        self.hasVideo = -1
+
         self.rewards = []
         self.faqs = []
 
@@ -128,7 +138,8 @@ def getRewardList(soup, project):
 
 def basicSanitize(inString):
     '''Returns a very roughly sanitized version of the input string.'''
-    return ' '.join(inString.encode('ascii', 'ignore').strip().split())
+    returnString = ' '.join(inString.encode('ascii', 'ignore').strip().split())
+    return returnString
 
 def getFaqList(soup, project):
     '''Given an input soup object and a parent object, return the faq list associated
@@ -198,8 +209,6 @@ def fillProjectInfo(soup, project):
                 project.name = basicSanitize(meta.get('content'))
             if 'og:description' in meta.get('property'):
                 project.shortText = basicSanitize(meta.get('content'))
-            else:
-                pass
 
     for div in soup.find_all('div'):
         if div.get('data-backers-count') is not None:
@@ -211,6 +220,11 @@ def fillProjectInfo(soup, project):
         if div.get('class') is not None and 'full-description' in div.get('class'):
             myText = ' '.join(div.findAll(text=True))
             project.text = basicSanitize(myText)
+        if div.get('data-has-video') is not None:
+            project.hasVideo = div.get('data-has-video') == 'true'
+        if div.get('id') is not None and "mentions" in div.get('id'):
+            if "Featured!" in div.text:
+                project.featured = 1
 
     for span in soup.find_all('span'):
         if span.get('data-duration') is not None:
@@ -219,6 +233,12 @@ def fillProjectInfo(soup, project):
             project.comments = int(span.get('data-comments-count').replace(',',''))
         if span.get('data-end_time') is not None:
             project.endDate = parse(span.get('data-end_time')).replace(tzinfo=None)
+        if span.get('data-updates-count') is not None:
+            project.updateCount = int(span.get('data-updates-count'))
+        if span.get('class') is not None and 'text' in span.get('class'):
+            matchObj = re.search('(\d+) backed', span.text)
+            if matchObj is None: continue
+            project.creatorNumBacked = int(matchObj.groups()[0])
 
     for li in soup.find_all('li'):
         if li.get('data-project-parent-category') is not None:
@@ -228,8 +248,10 @@ def fillProjectInfo(soup, project):
         if li.get('class') is not None and 'posted' in li.get('class'):
             searchObj = re.search('([A-Za-z]{3}. \d+, \d+)', basicSanitize(li.text))
             project.startDate = parse(searchObj.groups()[0]).replace(tzinfo=None)
+        if li.get('class') is not None and 'facebook-connected' in li.get('class'):
+            project.creatorFacebookConnected = 1
 
-    project.result = 0 if project.goal > project.raised else 1
+    project.result = 0 if project.goal >= project.raised else 1
     project.faqs = getFaqList(soup, project)
     project.rewards = getRewardList(soup, project)
 
@@ -251,6 +273,7 @@ def makeDatabase(htmlFolderName, outputPickleFolder, perFile = 1000):
         curFile.close()
         fillProjectInfo(curSoup, newProject)
         projects.append(newProject)
+
         curId = newProject.projectId
         if len(projects) == perFile:
             outputPickleFile = outputPickleFolder + '/' + str(fileCounter) + '.pickle'
