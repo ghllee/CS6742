@@ -8,7 +8,11 @@ from collections import defaultdict, Counter
 from scipy.stats import chi2_contingency
 from nltk.corpus import stopwords
 import string
+from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn import preprocessing
+from scipy.sparse import csr_matrix
+from scipy.io import mmwrite
 
 class _GetchUnix:
     def __init__(self):
@@ -159,6 +163,14 @@ def buildCategoryDictionary(projects):
     for p in projects: x[p.category].append(p)
     return x
 
+def buildSubCategoryDictionary(projects):
+    '''Given a list of projects, builds a dictionary that maps from {sub -> [p1, p2, p3]} for all projects in the input with subcategories.'''
+    x = defaultdict(list)
+    for p in projects:
+        if p.subCategory is not None:
+            x[p.subCategory].append(p)
+    return x
+
 def categoryAltruisticPropTest(projects):
     '''Given a list of projects, split on category. Then, conduct a proportion test for for each category for proportion of altruistic donations vs not altruistic donations split on success/failure.'''
     catDict = buildCategoryDictionary(projects)
@@ -231,29 +243,39 @@ def basicStats(projectsIn):
 
 def penLogisticRegression(featureMatrix, target):
     '''Given a feature matrix of size |items| x |features| and a binary target vector of length |items|, perform penalized logistic regression of the feature matrix on the target.'''
-    regressor = LogisticRegression(penalty = 'l2', dual=False)
+    regressor = LogisticRegression(penalty='l1', C=.01)
+    #regressor = DummyClassifier()
     regressor.fit(featureMatrix, target)
     return regressor
     
 def getCategoryControlFeatures(projects):
     '''Given a list of projects, return a |projects| x |category| sized binary matrix, representing the encoding of the input project's categories, and list of categories in the order represented.'''
     catDict = buildCategoryDictionary(projects)
-    returnMatrix = np.zeros([len(projects), len(catDict)], dtype = np.float32)
+    subcatDict = buildSubCategoryDictionary(projects)
+    returnMatrix = np.zeros([len(projects), len(catDict) + len(subcatDict)], dtype = np.float32)
     cats = catDict.keys()
+    subcats = subcatDict.keys()
 
     for i in range(len(projects)):
-        returnMatrix[i, cats.index(projects[i].category)] = 1
-    return returnMatrix, cats
+        curProject = projects[i]
+        if curProject.subCategory is None:
+            returnMatrix[i, cats.index(projects[i].category)] = 1
+        else:
+            returnMatrix[i, len(cats) + subcats.index(projects[i].subCategory)] = 1
+    return returnMatrix, cats + subcats
 
 
 def getExtraControlFeatures(projects):
     '''Given a list of projecst, return a |projects| x |features| sized matrix, representing the project control features of interest, and a list of features in the order represented.'''
 
-    features = ['goal','durationDays','numLevels','minPledge','midPledge','maxPledge',
-                'featured', 'video', 'numUpdates','numComments','fbConnect', 'featured',
-                'numFAQ', 'faqAveLen','creatorNumBacked', 'latitude', 'longitude', 
-                'daysSinceEpochStart', 'aveRewardLen', 'summaryLen']
-                
+    #features = ['goal','durationDays','numLevels','minPledge','midPledge','maxPledge',
+    #            'featured', 'video', 'numUpdates','numComments','fbConnect',
+    #            'numFAQ', 'faqAveLen','creatorNumBacked', 'latitude', 'longitude', 
+    #            'daysSinceEpochStart', 'aveRewardLen', 'summaryLen']
+     
+    features = ['goal', 'durationDays', 'numLevels', 'minPledge', 'featured', 'video',
+                'numUpdates', 'numComments', 'fbConnect']
+           
     returnMatrix = np.zeros([len(projects),len(features)], dtype = np.float32)
 
     for i in range(len(features)):
@@ -324,9 +346,8 @@ def getExtraControlFeatures(projects):
     
     return returnMatrix, features
         
-def extractTextFeatures(projects, minOccur = 30, nGram = 3):
+def extractTextFeatures(projects, minOccur = 50, nGram = 3):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category.'''
-
     #dict mapping from category -> set of n grams in that category
     catGramDict = defaultdict(set)
     #counter mapping from n-gram -> count
@@ -334,25 +355,31 @@ def extractTextFeatures(projects, minOccur = 30, nGram = 3):
 
     myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
 
+    #map from {project -> {gram -> count}}
+    docCounter = defaultdict(Counter)
+
     for n in range(1,nGram+1):
         print "Extracting " + str(n) + "-grams"
         for p in projects:
             nGrams = myGramFun(p.text, n)
-            for g in nGrams: nGramCounter[g] += 1
+            for g in nGrams:
+                nGramCounter[g] += 1
+                docCounter[p][g] += 1
             catGramDict[p.category].update(set(nGrams))
-    
+
     validGrams = [x for x in set.intersection(*catGramDict.values()) if nGramCounter[x] >= minOccur]
     validGrams = [v for v in validGrams if not
-                  set.issubset(set(v.split()), set(stopwords.words('english')))] 
+                  set.issubset(set(v.split()), set(stopwords.words('english')))]
 
     print "Using {} n-grams".format(len(validGrams))
     
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
+    print "Filling feature matrix..."
     for i in range(len(projects)):
+        if i is not 0 and i % 100 == 0: print i
         curProject = projects[i]
         for j in range(len(validGrams)):
-            curGram = validGrams[j]
-            returnMatrix[i,j] += projects[i].text.count(curGram)
+            returnMatrix[i,j] += docCounter[curProject][validGrams[j]]
     
     return returnMatrix, validGrams
 
@@ -368,24 +395,73 @@ def getNGrams(stringIn, n, toLower = True, removePunct = False):
     for i in range(len(tokens)-n+1): returnList.append(' '.join(tokens[i:i+n]))
     return returnList
 
+def crossValidate(dataMatrix, target, k=5):
+    '''Returns the average cross validation error given k groups'''
+    (numEx, numFeatures) = dataMatrix.shape
+
+    print dataMatrix.shape
+
+    def chunks(l, n):
+        if n < 1:
+            n = 1
+        return [l[i:i + n] for i in range(0, len(l), n)]
+        
+    myChunks = chunks(range(numEx), numEx/k)
+
+    aveAcc = 0
+    for i in range(k):
+        testingData = dataMatrix[myChunks[i],:]
+        testingTarget = target[myChunks[i]]
+
+        trainingIndices = []
+        for j in range(k):
+            if j == i: continue
+            trainingIndices.extend(myChunks[j])
+
+        trainingData = dataMatrix[trainingIndices,:]
+        trainingTarget = target[trainingIndices]
+        print trainingData.shape
+        print testingData.shape
+
+        print "Training Regression {} of {}...".format(i+1, k)
+        myModel = penLogisticRegression(trainingData, trainingTarget)
+        acc = myModel.score(testingData, testingTarget)
+        print "Acc = {}".format(acc)
+        aveAcc += acc
+
+    return aveAcc/k
+
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
     basicStats(projects)
-    
+
+    updates = [p.updates for p in projects]
     featureMatrix1, ngrams = extractTextFeatures(projects)
     featureMatrix2, cats = getCategoryControlFeatures(projects)
     featureMatrix3, controls = getExtraControlFeatures(projects)
-    featureMatrix4, success = np.array([p.result == 1 for p in projects], dtype = np.int), ['success']
+    target = np.zeros([len(projects), 1], dtype=np.int)
+    target[:,0] = np.array([p.result == 1 for p in projects])
 
-    data = np.concatenate([featureMatrix1, featureMatrix2, featureMatrix3, featureMatrix4], axis = 1)
-    headers = np.concatenate([ngrams, cats, controls, success])
+    ngrams = ['T' + g for g in ngrams]
+    cats = ['C' + c for c in cats]
+    controls = ['O' + o for o in controls]
 
-    with open('success.csv', 'wb') as f:
-        headerString = ','.join(headers)[:-1]
-        f.write(headerString + "\n")
-        np.savetxt(f, data, delimiter=",")
+    data = np.concatenate([featureMatrix1,
+                           featureMatrix2,
+                           featureMatrix3],axis = 1)
+    
+    headers = np.concatenate([ngrams,
+                              cats,
+                              controls])
 
+    sparseMatrix = csr_matrix(data)
+    mmwrite("data.mtx", sparseMatrix)
+    np.savetxt("result.csv", target)
+    #data = preprocessing.scale(data)
+
+    
+    
 
 if __name__ == '__main__':
     main()

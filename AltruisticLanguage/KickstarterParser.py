@@ -16,6 +16,7 @@ class Project:
         self.backers = -1
         self.parentCategory = ""
         self.category = ""
+        self.subCategory = None
         self.duration = -1.
         self.startDate = datetime(1900, 1, 1, 1, 1, 1, 1)
         self.endDate = datetime(1900, 1, 1, 1, 1, 1, 1)
@@ -28,42 +29,39 @@ class Project:
         self.comments = -1
         self.result = -1
         self.updates = -1
-        #this one needs to start at as F, because if a tag exists, then yes,
-        #if if it doesn't exist, then no. It's easier to just start it at 0.
         self.creatorFacebookConnect = 0 
-        #same with this one
         self.featured = 0
-
         self.creatorNumBacked = -1
-
         self.hasVideo = -1
-
         self.rewards = []
         self.faqs = []
 
     def __str__(self):
         retStr = ""
-        retStr += self.name + "\n"
-        retStr += "Id = " + str(self.projectId) + "\n"
-        retStr += "url = " + self.url + "\n"
-        retStr += str(self.backers) + " backers" + "\n"
-        retStr += "cat = " + self.category + "\n"
-        retStr += "parentCat = " + self.parentCategory + "\n"
+        retStr += "projectId = " + str(self.projectId) + "\n"
+        retStr += "name = " + str(self.name) + "\n"
+        retStr += "url = " + str(self.url) + "\n"
+        retStr += "backers = " + str(self.backers) + "\n"
+        retStr += "parentCategory = " + str(self.parentCategory) + "\n"
+        retStr += "category = " + str(self.category) + "\n"
         retStr += "duration = " + str(self.duration) + "\n"
-        retStr += "end date = " + str(self.endDate) + "\n"
-        retStr += "start date = " + str(self.startDate) + "\n"
+        retStr += "startDate = " + str(self.startDate) + "\n" 
+        retStr += "endDate = " + str(self.endDate) + "\n"
         retStr += "goal = " + str(self.goal) + "\n"
         retStr += "raised = " + str(self.raised) + "\n"
         retStr += "lat = " + str(self.lat) + "\n"
         retStr += "lon = " + str(self.lon) + "\n"
         retStr += "comments = " + str(self.comments) + "\n"
-        retStr += "finished = " + str(self.result) + "\n"
-        for r in self.rewards:
-            retStr += str(r) + "\n"
-        for f in self.faqs:
-            retStr += str(f) + "\n"
+        retStr += "result = " + str(self.result) + "\n"
+        retStr += "updates = " + str(self.updates) + "\n"
+        retStr += "creatorFacebookConnect = " + str(self.creatorFacebookConnect) + "\n"
+        retStr += "featured = " + str(self.featured) + "\n"
+        retStr += "creatorNumBacked = " + str(self.creatorNumBacked) + "\n"
+        retStr += "hasVideo = " + str(self.hasVideo) + "\n"
+        retStr += "Number of rewards = " + str(len(self.rewards)) + "\n" 
+        retStr += "Number of faqs = " + str(len(self.faqs)) + "\n"
         retStr += self.shortText + "\n"
-        retStr += self.text
+        retStr += self.text[:20]
         return retStr
 
 class FAQ:
@@ -234,7 +232,7 @@ def fillProjectInfo(soup, project):
         if span.get('data-end_time') is not None:
             project.endDate = parse(span.get('data-end_time')).replace(tzinfo=None)
         if span.get('data-updates-count') is not None:
-            project.updateCount = int(span.get('data-updates-count'))
+            project.updates = int(span.get('data-updates-count'))
         if span.get('class') is not None and 'text' in span.get('class'):
             matchObj = re.search('(\d+) backed', span.text)
             if matchObj is None: continue
@@ -249,12 +247,40 @@ def fillProjectInfo(soup, project):
             searchObj = re.search('([A-Za-z]{3}. \d+, \d+)', basicSanitize(li.text))
             project.startDate = parse(searchObj.groups()[0]).replace(tzinfo=None)
         if li.get('class') is not None and 'facebook-connected' in li.get('class'):
-            project.creatorFacebookConnected = 1
+            project.creatorFacebookConnect = 1
 
     project.result = 0 if project.goal >= project.raised else 1
     project.faqs = getFaqList(soup, project)
     project.rewards = getRewardList(soup, project)
+    fixCategorySubcategory(project)
 
+def fixCategorySubcategory(projectIn):
+    '''Given a project with its category variable set (that might actually represent a subcategory) set the category variable properly.'''
+    curCat = projectIn.category
+    #maps from category -> subcategories
+    catDict = {"Art":["Conceptual Art","Crafts","Digital Art","Illustration","Painting",
+                      "Performance Art","Mixed Media","Public Art","Sculpture"],
+               "Design":["Graphic Design","Product Design"],
+               "Games":["Board & Card Games", "Video Games"],
+               "Fashion":[],
+               "Music":["Classical Music","Country & Folk","Electronic Music",
+                        "Hip-Hop","Indie Rock","Jazz","Pop","Rock","World Music"],
+               "Film & Video":["Animation","Documentary","Narrative Film","Short Film",
+                               "Webseries"],
+               "Comics":[],
+               "Publishing":["Art Book","Children's Book","Fiction","Journalism","Nonfiction",
+                             "Periodical","Poetry"],
+               "Technology":["Open Hardware", "Open Software"],
+               "Dance":[],
+               "Theater":[],
+               "Photography":[],
+               "Food":[]}
+
+    if not curCat in catDict.keys():
+        projectIn.subCategory = curCat
+        for cat, subs in catDict.iteritems():
+            if projectIn.subCategory in subs:
+                projectIn.category = cat
 
 def makeDatabase(htmlFolderName, outputPickleFolder, perFile = 1000):
     '''Given a database file input, returns a list of project objects and pickles the output'''
@@ -285,13 +311,18 @@ def makeDatabase(htmlFolderName, outputPickleFolder, perFile = 1000):
 
         fileNum = newProject.projectId
         if fileNum != 0 and fileNum % 100 == 0: print fileNum
-
         
 
     myOut = open(outputPickleFolder + '/' + str(fileCounter) + '.pickle', 'w')
     pickle.dump(projects, myOut, -1)
     myOut.close()
     
+    numCats = len(set([p.category for p in projects]))
+    numSubCats = len(set([p.subCategory for p in projects if p.subCategory is not None]))
+
+    print "There are this many cats(13): " + str(numCats)
+    print "There are this many subcats(36): " + str(numSubCats)
+
 def main():
     makeDatabase("kickstarter", "output")
 
