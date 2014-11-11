@@ -345,7 +345,61 @@ def getExtraControlFeatures(projects):
                 print curFeature + " not a valid feature."
     
     return returnMatrix, features
-        
+      
+
+def getValidGrams(projects, minOccur = 50, nGram = 3):
+    '''Given a list of projects, return the valid set of n-grams associated with that set.'''
+    myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
+    nGramCounter = Counter()
+    catGramDict = defaultdict(set)
+
+    gramsInQuestion = ["essay",
+                       "detailing the",
+                       "tx contact",
+                       "world music",
+                       "the artistic",
+                       "projects will",
+                       "is our way",
+                       "illustration 1",
+                       "and reward",
+                       "members will",
+                       "animation 1",
+                       "the type of",
+                       "dc contact me",
+                       "small portion of",
+                       "to pledge to",
+                       "very high",
+                       "the universal",
+                       "saved",
+                       "campaign will help",
+                       "videoduration"]
+
+    for n in range(1,nGram+1):
+        print "Extracting " + str(n) + "-grams"
+        for p in projects:
+            nGrams = myGramFun(p.text, n)
+            for r in p.rewards:
+                nGrams.extend(myGramFun(r.text,n))
+            for g in nGrams:
+                nGramCounter[g] += 1
+            catGramDict[p.category].update(set(nGrams))
+
+    for g in gramsInQuestion:
+        print g, nGramCounter[g]
+        catsNotIn = []
+        for k,v in catGramDict.iteritems():
+            if g not in v: catsNotIn.append(k)
+        print catsNotIn
+        print "~"*5
+
+    validGrams = set([v for v in set.intersection(*catGramDict.values())
+                      if nGramCounter[v] >= minOccur])
+
+    validGrams = set([v for v in validGrams if not
+                  set.issubset(set(v.split()), set(stopwords.words('english')))])
+
+    return validGrams
+
 def extractTextFeatures(projects, minOccur = 50, nGram = 3):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category.'''
     #dict mapping from category -> set of n grams in that category
@@ -362,6 +416,8 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3):
         print "Extracting " + str(n) + "-grams"
         for p in projects:
             nGrams = myGramFun(p.text, n)
+            for r in p.rewards:
+                nGrams.extend(myGramFun(r.text,n))
             for g in nGrams:
                 nGramCounter[g] += 1
                 docCounter[p][g] += 1
@@ -374,14 +430,48 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3):
     print "Using {} n-grams".format(len(validGrams))
     
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
-    print "Filling feature matrix..."
     for i in range(len(projects)):
         if i is not 0 and i % 100 == 0: print i
         curProject = projects[i]
         for j in range(len(validGrams)):
             returnMatrix[i,j] += docCounter[curProject][validGrams[j]]
-    
+
     return returnMatrix, validGrams
+
+
+def extractGivenTextFeatures(projects, inFile):
+    '''Given an input of text features in the form of the kickstarter paper, return the feature matrix and valid n-grams.'''
+
+    ngrams = getGramsFromFile("KS.predicts")
+    myNGrams = [g[0] for g in ngrams]
+    print "Using {} n-grams".format(len(myNGrams))
+    #dictionary mapping from ngram -> index
+    nGramMap = {}
+    for i in range(len(myNGrams)): nGramMap[myNGrams[i]] = i
+
+    returnMatrix = np.zeros([len(projects),len(myNGrams)], dtype = np.float32)
+
+    catGramDict = defaultdict(set)
+
+    myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
+
+    #map from {project -> {gram -> count}}
+    docCounter = defaultdict(Counter)
+
+    for n in range(1,4):
+        print "Extracting " + str(n) + "-grams"
+        for i in range(len(projects)):
+            if i != 0 and i % 1000 == 0: print i
+            curProject = projects[i]
+            nGrams = myGramFun(curProject.text, n)
+            for r in curProject.rewards:
+                nGrams.extend(myGramFun(r.text,n))
+            nGramCounter = Counter(nGrams)
+            for k,v in nGramCounter.iteritems():
+                if k in myNGrams: returnMatrix[i,nGramMap[k]] = v
+    
+    return returnMatrix, myNGrams
+    
 
 
 def getNGrams(stringIn, n, toLower = True, removePunct = False):
@@ -431,37 +521,92 @@ def crossValidate(dataMatrix, target, k=5):
 
     return aveAcc/k
 
-def main():
-    projects = loadProjects('output')
-    projects = [p for p in projects if len(p.category) != 0]
-    basicStats(projects)
-
-    updates = [p.updates for p in projects]
-    featureMatrix1, ngrams = extractTextFeatures(projects)
+def saveFeatureMatrixAndHeaders(projects, matrixOut, targetOut, headersOut,
+                                control = False, given = None):
+    '''Given a list of projects, filenames for the output matrix/target/header data, and whether or not you just want the control matrix, outputs the requested data to the requested files.'''
+    if not control:
+        if given is None:
+            featureMatrix1, ngrams = extractTextFeatures(projects)
+        else:
+            featureMatrix1, ngrams = extractGivenTextFeatures(projects, given)
     featureMatrix2, cats = getCategoryControlFeatures(projects)
     featureMatrix3, controls = getExtraControlFeatures(projects)
-    target = np.zeros([len(projects), 1], dtype=np.int)
+--output-state topic-state.gz    target = np.zeros([len(projects), 1], dtype=np.int)
     target[:,0] = np.array([p.result == 1 for p in projects])
 
-    ngrams = ['T' + g for g in ngrams]
+    if not control: ngrams = ['T' + g for g in ngrams]
     cats = ['C' + c for c in cats]
     controls = ['O' + o for o in controls]
 
-    data = np.concatenate([featureMatrix1,
-                           featureMatrix2,
-                           featureMatrix3],axis = 1)
-    
-    headers = np.concatenate([ngrams,
-                              cats,
-                              controls])
+    if not control:
+        data = np.concatenate([featureMatrix1,
+                               featureMatrix2,
+                               featureMatrix3],axis = 1)
+    else:
+        data = np.concatenate([featureMatrix2,
+                               featureMatrix3],axis = 1)
+
+    if not control:
+        headers = np.concatenate([ngrams,
+                                  cats,
+                                  controls])
+    else:
+        headers = np.concatenate([cats,
+                                  controls])
 
     sparseMatrix = csr_matrix(data)
-    mmwrite("data.mtx", sparseMatrix)
-    np.savetxt("result.csv", target)
-    #data = preprocessing.scale(data)
+    mmwrite(matrixOut, sparseMatrix)
+    np.savetxt(targetOut, target)
+    with open(headersOut, 'w') as f:
+        f.write(",".join(headers) + "\n") 
+
+def getGramsFromFile(filename):
+    '''Given a filename of a file that stores n-gram weight information, return a list of tuples corresponding to the (gram, weight) pairs described by that file'''
+
+    returnList = []
+    myFile = open(filename)
+    for line in myFile.read().split("\r"):
+        myMatch = re.match("(.+)\t(.+)", line)
+        returnList.append((myMatch.groups()[0], myMatch.groups()[1]))
+
+    return returnList
+
+def compareMineToTheirs(projects):
+    grams = getGramsFromFile("KS.predicts")
+    #featureMatrix1, ngrams = extractTextFeatures(projects)
+    
+
+    myGrams = set(getValidGrams(projects))
+    theirGrams = set([g[0] for g in grams])
+    
+    print "I use " + str(len(myGrams)) + " ngrams"
+    print "They use " + str(len(theirGrams)) + " ngrams"
+
+
+    print "They use " + str(len(theirGrams - myGrams)) + " unique n-grams when compared to me."
+    print "I use " + str(len(myGrams - theirGrams)) + " unique n-grams when compared to them."
+    
+    print "~~~~~~ They use that I don't ~~~~~~"
+    for g in list(theirGrams - myGrams)[:20]:
+        print g
+    
+    print "~~~~~~ I use that they don't ~~~~~~"
+    for g in list(myGrams - theirGrams)[:20]:
+        print g
+
+def main():
+    projects = loadProjects('output')
+    projects = [p for p in projects if len(p.category) != 0]
+    #basicStats(projects)
+    compareMineToTheirs(projects)
+    #saveFeatureMatrixAndHeaders(projects, "data.mtx", "target.csv", "headers.csv")
+    #saveFeatureMatrixAndHeaders(projects, "dataControl.mtx",
+    #                            "targetControl.csv", "headersControl.csv", control=True)
 
     
+    #target = np.zeros([len(projects), 1], dtype=np.int)
+    #target[:,0] = np.array([p.result == 1 for p in projects])
+    #np.savetxt("target.csv", target)
     
-
 if __name__ == '__main__':
     main()
