@@ -257,6 +257,9 @@ def main():
     itemCounter = 0
     productIdFile = open("productIds.txt", 'w')
     for popItem in mostReviewed:
+        itemScores = [reviews[popItem][i].score for i in range(len(reviews[popItem]))]
+        meanReivewScore = sum(itemScores)/len(itemScores)
+
         productIdFile.write(popItem + '\n')
         outFile = open("temp/" + str(itemCounter) + '.csv' , 'w')
         outFileTypicalWords = open("temp/" + str(itemCounter) + '.txt' , 'w')
@@ -294,7 +297,8 @@ def main():
                 helpRatio = float(curReview.helpfulness[0])/curReview.helpfulness[1]
                 if helpRatio > helpratio: helpful = 1
 
-            outFile.write(str(minDist) + "," + str(helpful) + "\n")
+            outFile.write(str(minDist) + "," + str(np.abs(curReview.score - meanReivewScore))
+                          + "," + str(helpful) + "\n")
         
         outFile.close()
         outFileTypicalWords.close()
