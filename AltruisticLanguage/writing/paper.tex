@@ -5,40 +5,54 @@
 \usepackage{times}
 \usepackage{helvet}
 \usepackage{courier}
+\usepackage{url}
 \frenchspacing
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
 \pdfinfo{
-/Title Kickstarter Stuff
-/Author Jack Hessel, Lillian Lee
+/Title Pre-orders or Philanthropy: An Analysis of Altruism on Kickstarter
+/Author Jack Hessel
 /Keywords X,Y,Z}
 \setcounter{secnumdepth}{0}  
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
-\title{Kickstarter Stuff}
-\author{author stuff here
-}
+\title{Pre-orders or Philanthropy: An Analysis of Altruism on Kickstarter}
+\author{Jack Hessel}
 \maketitle
 \begin{abstract}
 \begin{quote}
-ABS
+Abstract
 \end{quote}
 \end{abstract}
 
-\noindent Blah
+\section{Introduction}
 
-\section{EDA}
+In recent years, crowdfunding websites have emerged as a popular method of fundraising for individuals looking to promote their ventures to online communities. The most popular of these sites, Kickstarter, provides a venue for entrepreneurs to connect with individuals who might be interested in financially supporting their project ideas, which range from artistic endevours to technology startups. To date, over \$1.4B has been invested in Kickstarter projects from more than 7.4M unique backers resulting in over 73K successfully funded projects. \footnote{ \url{www.kickstarter.com/help/stats}} Each project is associated with a set of creator-defined rewards that donors can choose from. Often, these rewards constitute pre-orders of a product that the project aims to bring to market.
 
+(PARAGRAPH ABOUT ACADEMIC INTEREST WITH CITATIONS)
 
+We argue that crowdfunding sites similar to Kickstarter occupy a unique space between a realm of pure salespersonship and a realm of pure altruism. A project that illustrates that Kickstarter is not purely altruistic nor purely commerical is ``Juicies.''\footnote{\url{http://tinyurl.com/juiciesproject}} In this project, the creators successfully attempted to create a company that sells multi-colored charging cables for various mobile devices, and offered cable preorders as rewards. The basic cable was associated with two rewards, one costing the suggested retail price of \$20, and the other charging users to ``pay what you can'' for the same cable costing \$1. While over 1K pay-what-you-can rewards were claimed, the \$20 reward was claimed 280 times. Users voluntarily paying more for an identical product sugguests that Kickstarter is not a community solely focused on commercialism.
 
-\section{Altruism on Kickstarter}
+Furthermore, in our dataset consisting of 45810 completed Kickstarter projects, we are able to quantify the number of purely altruistic donation events and the total value given above and beyond the amount required for all reward claims. When a user backs a project on Kickstarter (which is impossible to do anonymously) they are able to select an option that allows them to claim no rewards. Because the total number of claims for each reward are displayed publically on the project page, along with the total number of backers, we are able to compute the total number of purely altruistic donation events for each project. Also, the site allows for users to give an amount exceeding the cost of a given reward, so we are able to compute the total amount donated to a project above and beyond the amount required for all the posted reward claims. Of the roughly 3.4M donation events, about 360K (10.59\%) resulted from users who selected no reward. Of the roughly \$246M pledged in our dataset, over \$53M (21.59\%) was given altruistically.
 
-Really neat example of altruism: https://www.kickstarter.com/projects/laudowicz/juicies-colorful-cables-for-ipod-iphone-and-ipad.
+The community and language of Kickstarter have been studied previously. Mitra and Gilbert analyze the language that predicts successful Kickstarter projects \cite{mitra2014language}. When compared their baseline regression trained on language-indepedent project features, their final classifier, which includes n-gram counts, is able to classify projects 15\% more accurately, resulting in a 97.8\% correct prediction rate in a 10-fold cross validation setting. Similar analyses that do not take language fully into account are not able to achieve such predictive accuracy. Studies that use of minimal textual information in conjunction with baseline project features are able to learn classifiers that reach 68\% accuracy using information available at launch time \cite{greenberg2013crowdfunding}. Even using post-launch information, however, does not improve accuracy as much as accounting for language; 85\% accuracy is achieved using information available after 15\% of the duration of the campaign has expired \cite{etter2013launch}. These findings sugguest that language is very important on Kickstarter, which is a primary motivation for making it a focus of our analysis.
 
-\section{Yeah}
-Here's this. Thank you for reading these instructions carefully. We look forward to receiving your electronic files! \cite{rumelhart1988learning}.
+Altruism in online communities has also been studied as well. Althoff et al. examine a purely altruistic community wherein users request free pizza from other members \cite{althoff2014ask}. An advantage of their dataset is that all altruistic requests are made for the same service. MORE MORE MORE
+
+These observations and previous work motivate our research questions: how does the language used on Kickstarter differ from the language used in a purely commercial setting? Or a purely altruistic setting? What types of Kickstarter projects are donated to altruistically? Does the language of a project description predict the donation behavior of backers?
+
+\section{Previous Work}
+
+\section{Dataset and Methods}
+
+\section{Kickstarter vs. GoFundMe vs. Amazon}
+What language used on Kickstarter is altruistic? What language used on Kickstarter is commercial? To address these questions, it might be possible to derive stringent definitions of altruism and salespersonship. However, for our analysis, we resort to a more objective analysis by incorporating two additional data sets., one from Amazon and one from GoFundMe. Amazon is a very popular  To compare the language used on Kickstarter to purely commercial and purely altrustic 
+
+\section{Prediction of Altruism on Kickstarter}
+
+\section{Conclusion}
 
 \bibliographystyle{aaai} \bibliography{refs}
 
