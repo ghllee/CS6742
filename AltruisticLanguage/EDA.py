@@ -605,8 +605,9 @@ def compareMineToTheirs(projects):
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
+    basicStats(projects)
     #texts = [p.text for p in projects]
-    extractTextFeatures(projects, minOccur = 50, nGram = 3)
+    #extractTextFeatures(projects, minOccur = 50, nGram = 3)
     #with open("KSText.pickle", 'w') as f: pickle.dump(texts, f, -1)
     #basicStats(projects)
     #compareMineToTheirs(projects)

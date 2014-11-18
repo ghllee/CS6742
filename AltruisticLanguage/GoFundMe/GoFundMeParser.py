@@ -115,16 +115,12 @@ def extractTextFeatures(projects, minOccur = 10, nGram = 3):
 
     myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
 
-    #map from {project -> {gram -> count}}
-    docCounter = defaultdict(Counter)
-
     for n in range(1,nGram+1):
         print "Extracting " + str(n) + "-grams"
         for p in projects:
             nGrams = myGramFun(p.text, n)
             for g in nGrams:
                 nGramCounter[g] += 1
-                docCounter[p][g] += 1
             catGramDict[p.category].update(set(nGrams))
 
     validGrams = [x for x in proportionalIntersection(catGramDict.values(), proportion=.50)
