@@ -401,8 +401,8 @@ def getValidGrams(projects, minOccur = 50, nGram = 3):
 
     return validGrams
 
-def extractTextFeatures(projects, minOccur = 50, nGram = 3):
-    '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category.'''
+def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
+    '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category. If counts = True, then the return matrix has counts features, if counts=False, then the return matrix has binary indicators'''
     #dict mapping from category -> set of n grams in that category
     catGramDict = defaultdict(set)
     #counter mapping from n-gram -> count
@@ -417,8 +417,11 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3):
         print "Extracting " + str(n) + "-grams"
         for p in projects:
             nGrams = myGramFun(p.text, n)
-            #for r in p.rewards:
-            #    nGrams.extend(myGramFun(r.text,n))
+            for r in p.rewards:
+                nGrams.extend(myGramFun(r.text,n))
+            for f in p.faqs:
+                nGrams.extend(myGramFun(f.question,n))
+                nGrams.extend(myGramFun(f.answer,n))
             for g in nGrams:
                 nGramCounter[g] += 1
                 docCounter[p][g] += 1
@@ -430,11 +433,6 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3):
     validGrams = [v for v in validGrams if not
                   set.issubset(set(v.split()), set(stopwords.words('english')))]
 
-    with open('kickstarter.ngrams', 'w') as f:
-        for v in validGrams:
-            f.write(v + "\n")
-    quit()
-
     print "Using {} n-grams".format(len(validGrams))
     
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
@@ -442,15 +440,17 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3):
         if i is not 0 and i % 100 == 0: print i
         curProject = projects[i]
         for j in range(len(validGrams)):
-            returnMatrix[i,j] += docCounter[curProject][validGrams[j]]
-
+            if counts:
+                returnMatrix[i,j] += docCounter[curProject][validGrams[j]]
+            else:
+                returnMatrix[i,j] = 1 if docCounter[curProject][validGrams[j]] != 0 else 0
     return returnMatrix, validGrams
 
 
-def extractGivenTextFeatures(projects, inFile):
+def extractGivenTextFeatures(projects, inFile, counts=False):
     '''Given an input of text features in the form of the kickstarter paper, return the feature matrix and valid n-grams.'''
 
-    ngrams = getGramsFromFile("KS.predicts")
+    ngrams = getGramsFromFile(inFile)
     myNGrams = [g[0] for g in ngrams]
     print "Using {} n-grams".format(len(myNGrams))
     #dictionary mapping from ngram -> index
@@ -476,8 +476,11 @@ def extractGivenTextFeatures(projects, inFile):
                 nGrams.extend(myGramFun(r.text,n))
             nGramCounter = Counter(nGrams)
             for k,v in nGramCounter.iteritems():
-                if k in myNGrams: returnMatrix[i,nGramMap[k]] = v
-    
+                if k in myNGrams:
+                    if counts:
+                        returnMatrix[i,nGramMap[k]] = v
+                    else:
+                        returnMatrix[i,nGramMap[k]] = 1
     return returnMatrix, myNGrams
     
 
@@ -530,13 +533,13 @@ def crossValidate(dataMatrix, target, k=5):
     return aveAcc/k
 
 def saveFeatureMatrixAndHeaders(projects, matrixOut, targetOut, headersOut,
-                                control = False, given = None):
+                                control = False, given = None, counts = True):
     '''Given a list of projects, filenames for the output matrix/target/header data, and whether or not you just want the control matrix, outputs the requested data to the requested files.'''
     if not control:
         if given is None:
-            featureMatrix1, ngrams = extractTextFeatures(projects)
+            featureMatrix1, ngrams = extractTextFeatures(projects, counts=counts)
         else:
-            featureMatrix1, ngrams = extractGivenTextFeatures(projects, given)
+            featureMatrix1, ngrams = extractGivenTextFeatures(projects, given, counts=counts)
     featureMatrix2, cats = getCategoryControlFeatures(projects)
     featureMatrix3, controls = getExtraControlFeatures(projects)
     target = np.zeros([len(projects), 1], dtype=np.int)
@@ -605,13 +608,15 @@ def compareMineToTheirs(projects):
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
-    basicStats(projects)
+    #basicStats(projects)
     #texts = [p.text for p in projects]
     #extractTextFeatures(projects, minOccur = 50, nGram = 3)
     #with open("KSText.pickle", 'w') as f: pickle.dump(texts, f, -1)
     #basicStats(projects)
     #compareMineToTheirs(projects)
-    #saveFeatureMatrixAndHeaders(projects, "data.mtx", "target.csv", "headers.csv")
+    saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
+                                "target.csv", "headersTheirs.csv", given="KS.predicts",
+                                counts=False)
     #saveFeatureMatrixAndHeaders(projects, "dataControl.mtx",
     #                            "targetControl.csv", "headersControl.csv", control=True)
 

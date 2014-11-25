@@ -11,17 +11,17 @@ rsort <- function(x) {
 myResult <- factor(read.csv("target.csv", header = F)$V1)
 
 #NORMALS
-myData <- readMM("data.mtx")
+myData <- readMM("dataBinaryTheirs.mtx")
 crossValid <- cv.glmnet(myData, myResult, family="binomial",
                         alpha=1, type.measure = "class",
-                        parallel=T, lambda = exp(seq(-10,-2, by=1)))
+                        parallel=T)
 bestlambda<-crossValid$lambda.min
 mse.min <- crossValid$cvm[crossValid$lambda == bestlambda]
 myCoefs <- coef(crossValid, s=bestlambda)
 myCoefMatrix <- as.matrix(myCoefs)
 myPredictions <- predict(crossValid, myData, type = "class", s=bestlambda)
 colnames(myCoefMatrix) <- c("Beta")
-headers <- read.csv("headers.csv")
+headers <- read.csv("headersTheirs.csv")
 rownames(myCoefMatrix) <- c("Intercept", colnames(headers))
 
 apply(myCoefMatrix, 2, sort)[1:topK,]
