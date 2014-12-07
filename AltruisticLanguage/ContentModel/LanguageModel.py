@@ -123,6 +123,23 @@ class BigramModel(LanguageModel):
         self.d1 = parameters[0]
         self.V = parameters[1]
 
+
+class UniformModel(LanguageModel):
+    def train(self, sentencesIn):
+        self.vocab = set()
+        for s in sentencesIn:
+            self.vocab.update(set(s.split()))
+        self.vocabLen = len(self.vocab)
+
+    def logProb(self, sentence):
+        return -999999
+        return -np.log(self.vocabLen) - len(sentence.split()) * np.log(self.vocabLen+1)
+        
+    def setParams(self, parameters):
+        '''This model requires no parameters'''
+        pass
+
+
 def main():
     y = ['is jack is jack','is jack']
     x = BigramModel(y, parameters=(.001, 100000))

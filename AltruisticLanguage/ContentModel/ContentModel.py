@@ -1,4 +1,4 @@
-from LanguageModel import BigramModel, ETCBigramModel
+from LanguageModel import BigramModel, ETCBigramModel, UniformModel
 import string
 from nltk import tokenize
 import nltk
@@ -6,11 +6,9 @@ import sys
 import cPickle as pickle
 from nltk import tokenize, ne_chunk
 from nltk.tokenize import WhitespaceTokenizer
-from sklearn.cluster import AgglomerativeClustering
 import warnings
 import re
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import TruncatedSVD
+from SentenceCluster import UnigramClusterer, BigramClusterer, ParagraphVectorClusterer
 from loadbar import LoadBar
 import numpy as np
 import random
@@ -18,10 +16,9 @@ from collections import Counter, defaultdict
 
 class ContentModel:
     def __init__(self, langModel = 'bigram',
-                 numClusters = 10,
-                 minProportion = .01,
-                 projectionDim = 100,
-                 clusterTrainProp = .004, 
+                 numClusters = 1275,
+                 minProportion = .007,
+                 clusterTrainProp = 1, 
                  d1 = .00001,
                  d2 = .001,
                  cleanSents = None,
@@ -31,7 +28,6 @@ class ContentModel:
         self.langModel = langModel
         self.numClusters = numClusters
         self.minProportion = minProportion
-        self.projectionDim = projectionDim
         self.clusterTrainProp = clusterTrainProp
         self.d1 = d1
         self.d2 = d2
@@ -60,68 +56,112 @@ class ContentModel:
                     pickle.dump(self.cleanSents, f, -1)
         print "There were " + str(len(self.cleanSents)) + " sentences."
         self.cleanSents = self.cleanSents[:int(np.floor(len(self.cleanSents)*self.clusterTrainProp))]
-        print "Finding bigram features"
-        myVectorizer = CountVectorizer(decode_error='ignore',ngram_range=(2,2))
-        bigramFeatures = myVectorizer.fit_transform([x[0] for x in self.cleanSents])
-        print "Executing LSA with " + str(self.projectionDim) + " dimensions"
-        myLSA = TruncatedSVD(n_components = self.projectionDim)
-        trainer = myLSA.fit_transform(bigramFeatures)
-        print "Clustering " + str(trainer.shape[0]) + " sentences for LM examples"
-        clusterer = AgglomerativeClustering(n_clusters = self.numClusters, affinity='cosine',
-                                            linkage = 'complete')
-        clusters = clusterer.fit_predict(trainer)
         print "Counting vocab..."
         vocab = set.union(*[set(x[0].split()) for x in self.cleanSents])
-        print "The trained vocab size is " + str(len(vocab))
+        print "The vocab size is " + str(len(vocab))
+        print "Clustering things"
+        clusterer = BigramClusterer(self.numClusters, show=True)
+        clusters = clusterer.cluster([x[0] for x in self.cleanSents])
+       
+        clusterCounts = Counter(clusters)
+        etcClusters = []
+        for cluster, count in clusterCounts.iteritems():
+            if count < self.minProportion * len(self.cleanSents):
+                etcClusters.append(cluster)
+        
+        print "Merged " + str(len(etcClusters)) + " into etc clusters"
+        m = self.numClusters - len(etcClusters) + 1
+        print "This gives us " + str(m) + " clusters"
+        clusters = [c if c not in etcClusters else -1 for c in clusters]
+        allClusters = set(clusters + [-1])
+
+        docDict = defaultdict(list)
+        for i in range(len(self.cleanSents)):
+            docDict[self.cleanSents[i][1]].append((self.cleanSents[i][0], clusters[i]))
+
+        for d, sents in docDict.iteritems():
+            observedSents = [x[0] for x in sents]
+            observedSeq = [x[1] for x in sents]
+
         #VITERBI OPTIMIZATION
         for i in range(10):
-            print "CLUSTERS"
-            print clusters[:25]
-            clusterCounts = Counter(clusters)
-            etcClusters = []
-            for cluster, count in clusterCounts.iteritems():
-                if count < self.minProportion * len(self.cleanSents):
-                    etcClusters.append(cluster)
-
-            print "Merged " + str(len(etcClusters)) + " into etc clusters"
-
+            print "Iteration " + str(i)
+            
             print "Training language models"
             self.lms = {}
-            for i in range(self.numClusters):
-                if i in etcClusters: continue
-                validSents = [self.cleanSents[x] for x in np.where(clusters==i)[0]] 
-                curLm = BigramModel([v[0] for v in validSents], parameters = (self.d1, len(vocab)))
-                self.lms[i] = curLm
+            #maps from cluster -> [sentence]
+            clustSent = defaultdict(list)
+            for i in range(len(self.cleanSents)): clustSent[clusters[i]].append(self.cleanSents[i])
 
+            #maps from cluster -> language model
+            print "Training Bigram LMs"
+            self.lms = {}
+            for x in allClusters:
+                if x == -1: continue
+                sents = clustSent[x]
+                self.lms[x] = BigramModel([y[0] for y in sents],
+                                          (self.d1, len(vocab)))
             print "Training ETC model"
-            self.lms['E'] = ETCBigramModel([x[0] for x in self.cleanSents],
-                                           parameters = (self.lms.values(),))
-            
-            curNumClusters = len(self.lms)
+            self.lms[-1] = ETCBigramModel([x[0] for x in self.cleanSents],
+                                          (self.lms.values(),))
             
             #dictionary from docIndex -> [(sent, clusternum)]
             docDict = defaultdict(list)
             for i in range(len(self.cleanSents)):
                 docDict[self.cleanSents[i][1]].append((self.cleanSents[i][0], clusters[i]))
 
-            transProbs = self.getTransitionProbs(clusters, etcClusters, docDict)
-            clusters = list(set(clusters)) + ['E']
+            print "Estimating transition probabilities"
+            transProbs = self.getTransitionProbs(allClusters, docDict, m)
+
             newPaths = {}
+            print "Estimating Viterbi paths"
+            numDocs = len(docDict.keys())
+            curIter = 0
+            bar.setup()
             for d, sents in docDict.iteritems():
+                if bar.test(curIter, numDocs): bar+=1
                 observedSents = [x[0] for x in sents]
                 observedSeq = [x[1] for x in sents]
+
                 (score, path) = self.mostLikelyPath(observedSents,
                                                     self.lms.keys(), self.lms,
-                                                    {k:np.log(1./curNumClusters) for k in clusters},
+                                                    {k:np.log(1./m) for k in allClusters},
                                                     transProbs)
                 newPaths[d] = path
+                curIter +=1
+            bar.clear()
             
             newClusters = []
+            curIter = 0
             for d, newPath in newPaths.iteritems():
-                print newPath
+                if curIter < 6: print newPath
                 newClusters.extend(newPath)
-            clusters = [x if x is not 'E' else 99999 for x in newClusters]
-            
+                curIter += 1
+            if newClusters == clusters:
+                print "Converged"
+                break
+            clusters = newClusters
+
+        docDict = defaultdict(list)
+        for i in range(len(self.cleanSents)):
+            docDict[self.cleanSents[i][1]].append((self.cleanSents[i][0], clusters[i]))
+        with open("docPathsOut.txt",'w') as f:
+            for doc, sentsClusters in docDict.iteritems():
+                for sc in sentsClusters:
+                    f.write(str(sc))
+                f.write("\n")
+
+        with open("clustersOut.txt",'w') as f:
+            for i in range(len(self.cleanSents)):
+                clustSent = defaultdict(list)
+                for i in range(len(self.cleanSents)): 
+                    clustSent[clusters[i]].append(self.cleanSents[i])
+            for c, sents in clustSent.iteritems():
+                f.write(str(c) + " " + str(len(sents)) + "\n")
+                for s in sents:
+                    f.write(s[0] + "\n")
+                f.write("***\n")
+
 
     def mostLikelyPath(self, observedSentences, states, stateToLm, startProbs, transProbs):
         '''Viterbi based on code from wikipedia.'''
@@ -135,12 +175,12 @@ class ContentModel:
         for t in range(1, len(observedSentences)):
             V.append({})
             newpath = {}
-            for lm in states:
-                (prob, state) = max((V[t-1][y] + transProbs[(y,lm)] +
-                                     stateToLm[lm].logProb(observedSentences[t]), y) 
-                                    for y in states)
-                V[t][lm] = prob
-                newpath[lm] = path[state] + [lm]
+            for y in states:
+                (prob, state) = max((V[t-1][y0] + transProbs[(y0,y)] + 
+                                     stateToLm[y].logProb(observedSentences[t]), y0)
+                                    for y0 in states)
+                V[t][y] = prob
+                newpath[y] = path[state] + [y]
             path = newpath
         n=0
         if len(observedSentences) != 1:
@@ -148,10 +188,9 @@ class ContentModel:
         (prob, state) = max((V[n][y], y) for y in states)
         return (prob, path[state])
 
-    def getTransitionProbs(self, clusters, etcClusters, docDict):
+    def getTransitionProbs(self, clusters, docDict, numClusters):
         '''Compute the transition probabilities in accordance with the smoothed estimate eqtn (logged)'''
-        clusters = list(set(clusters)) + ['E']
-        numClusters = len(clusters)
+        clusters = list(set(clusters))
         #{(s1, s2) -> prob of going from s1 to s2
         transProbs = {}
         #{(c1, c2) -> count}
@@ -160,12 +199,12 @@ class ContentModel:
         D = Counter()
         for doc, sents in docDict.iteritems():
             classifications = [x[1] for x in sents]
-            classifications = ['E' if x in etcClusters else x for x in classifications]
             D.update(list(set(classifications)))
             trans = []
             for i in range(len(classifications)-1):
                 trans.append((classifications[i], classifications[i+1]))
             Dpair.update(list(set(trans)))
+                
         for c1 in clusters:
             for c2 in clusters:
                 transProbs[(c1,c2)] = np.log(1.*(Dpair[(c1,c2)] + self.d2)/
@@ -230,8 +269,10 @@ def main():
         with open(loadFileClean) as f:
             dataClean = pickle.load(f)
     
+    data = [x for x in data if len(x[0].strip().split()) > 4]
+    dataClean = [x for x in dataClean if len(x[0].strip().split()) > 4]
 
-    x = ContentModel(saveFile = "GFM.clean", cleanSents = dataClean)
+    x = ContentModel(saveFile = "Medical.clean", cleanSents = dataClean)
     x.train(data)
     
 if __name__ == "__main__":

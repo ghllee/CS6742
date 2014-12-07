@@ -15,7 +15,9 @@ class LoadBar():
         return self
     
     def test(self, i, length):
-        return i!=0 and i%(length/self.width)==0
-            
+        try:
+            return i!=0 and i%(length/self.width)==0
+        except ZeroDivisionError:
+            return True
     def clear(self):
         sys.stdout.write("\n")

@@ -13,6 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
 from scipy.sparse import csr_matrix
 from scipy.io import mmwrite
+import matplotlib.pyplot as plt
 
 class _GetchUnix:
     def __init__(self):
@@ -173,12 +174,22 @@ def buildSubCategoryDictionary(projects):
 
 def categoryAltruisticPropTest(projects):
     '''Given a list of projects, split on category. Then, conduct a proportion test for for each category for proportion of altruistic donations vs not altruistic donations split on success/failure.'''
+
     catDict = buildCategoryDictionary(projects)
-    
+    subcatDict = buildSubCategoryDictionary(projects)
+
+    catDict = dict(catDict.items() + subcatDict.items())
+
     print '{:>18}  {:>18}  {:>18}  {:>18}'.format("Category",
                                                   "Alt Ratio Succ",
                                                   "Alt Ratio Fail",
                                                   "p-val")
+
+    barVals = []
+    barColors = []
+    barLabels = []
+    curIndex = 0
+    barLefts = []
     for cat, projectList in catDict.iteritems():
         if len(cat) == 0: continue
         success = [x for x in projectList if x.result and x.backers != 0]
@@ -192,10 +203,24 @@ def categoryAltruisticPropTest(projects):
 
         propSuc, propFail = float(sucAlt*1./sucTotal), float(failAlt*1./failTotal)
         
+        barVals.append(propFail-propSuc)
+        barColors.append('b' if p < .01 else 'r')
+        barLabels.append(cat)
+        barLefts.append(curIndex)
+        curIndex += 1
+
         print '{:>18}  {:>18.4f}  {:>18.4f}  {:>18.4f}'.format(cat, propSuc, propFail, p)
 
         #if propSuc > propFail: print "Greater proportion with successful projects"
         #else: print "Greater proportion with failed projects"
+
+    plt.bar(barLefts, barVals, align='center', color = barColors)
+    plt.xticks([b+.5 for b in barLefts], barLabels, rotation=45, ha='right')
+    figure = plt.gcf() # get current figure
+    figure.set_size_inches(14, 4)
+    plt.xlim([-1.1, len(barLefts)+.1])
+    plt.ylim([min(barVals) - .002, max(barVals) + .002])
+    plt.savefig("failSuccess.png", dpi = 100, bbox_inches='tight')
 
 def categoryAltruisticMeanValueTest(projects):
     '''Given a list of projects, split on category. Then, conduct a basic t-test for mean altruistic donation value over each of the categories split on succss/failure.'''
@@ -272,9 +297,15 @@ def getExtraControlFeatures(projects):
     #            'featured', 'video', 'numUpdates','numComments','fbConnect',
     #            'numFAQ', 'faqAveLen','creatorNumBacked', 'latitude', 'longitude', 
     #            'daysSinceEpochStart', 'aveRewardLen', 'summaryLen']
-     
+
+
+    #features = ['goal','durationDays','numLevels','minPledge','midPledge','maxPledge',
+    #            'featured', 'video', 'numUpdates','numComments','fbConnect',
+    #            'numFAQ', 'faqAveLen','creatorNumBacked', 'latitude', 'longitude', 
+    #            'daysSinceEpochStart', 'aveRewardLen', 'summaryLen']
+
     features = ['goal', 'durationDays', 'numLevels', 'minPledge', 'featured', 'video',
-                'numUpdates', 'numComments', 'fbConnect']
+                'numUpdates', 'numComments', 'fbConnect', 'success']
            
     returnMatrix = np.zeros([len(projects),len(features)], dtype = np.float32)
 
@@ -284,6 +315,8 @@ def getExtraControlFeatures(projects):
             curProject = projects[j]
             if curFeature == 'goal':
                 returnMatrix[j,i] = curProject.goal
+            elif curFeature == 'success':
+                returnMatrix[j,i] = curProject.result
             elif curFeature == 'durationDays': 
                 returnMatrix[j,i] = curProject.duration
             elif curFeature == 'numLevels':
@@ -352,27 +385,6 @@ def getValidGrams(projects, minOccur = 50, nGram = 3):
     myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
     nGramCounter = Counter()
     catGramDict = defaultdict(set)
-
-    gramsInQuestion = ["essay",
-                       "detailing the",
-                       "tx contact",
-                       "world music",
-                       "the artistic",
-                       "projects will",
-                       "is our way",
-                       "illustration 1",
-                       "and reward",
-                       "members will",
-                       "animation 1",
-                       "the type of",
-                       "dc contact me",
-                       "small portion of",
-                       "to pledge to",
-                       "very high",
-                       "the universal",
-                       "saved",
-                       "campaign will help",
-                       "videoduration"]
 
     for n in range(1,nGram+1):
         print "Extracting " + str(n) + "-grams"
@@ -543,7 +555,11 @@ def saveFeatureMatrixAndHeaders(projects, matrixOut, targetOut, headersOut,
     featureMatrix2, cats = getCategoryControlFeatures(projects)
     featureMatrix3, controls = getExtraControlFeatures(projects)
     target = np.zeros([len(projects), 1], dtype=np.int)
-    target[:,0] = np.array([p.result == 1 for p in projects])
+    #target[:,0] = np.array([p.result == 1 for p in projects])
+    #target[:,0] = np.array([p.backers - sum([y.numBackers for y in p.rewards]) for p in projects])
+    target[:,0] = np.array([0 if p.backers == 0 else
+                            (p.backers - sum([y.numBackers for y in p.rewards]))/(1.0*p.backers)>.1
+                            for p in projects])
 
     if not control: ngrams = ['T' + g for g in ngrams]
     cats = ['C' + c for c in cats]
@@ -573,7 +589,6 @@ def saveFeatureMatrixAndHeaders(projects, matrixOut, targetOut, headersOut,
 
 def getGramsFromFile(filename):
     '''Given a filename of a file that stores n-gram weight information, return a list of tuples corresponding to the (gram, weight) pairs described by that file'''
-
     returnList = []
     myFile = open(filename)
     for line in myFile.read().split("\r"):
@@ -608,22 +623,23 @@ def compareMineToTheirs(projects):
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
+    categoryAltruisticPropTest(projects)
     #basicStats(projects)
     #texts = [p.text for p in projects]
     #extractTextFeatures(projects, minOccur = 50, nGram = 3)
     #with open("KSText.pickle", 'w') as f: pickle.dump(texts, f, -1)
     #basicStats(projects)
     #compareMineToTheirs(projects)
-    saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
-                                "target.csv", "headersTheirs.csv", given="KS.predicts",
-                                counts=False)
-    #saveFeatureMatrixAndHeaders(projects, "dataControl.mtx",
-    #                            "targetControl.csv", "headersControl.csv", control=True)
+    #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
+    #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
+    #                            counts=False)
+    #saveFeatureMatrixAndHeaders(projects, "allWithSucc.mtx",
+    #                            "targetAltCounts.csv", "allHeadersWithSucc.csv", control=False)
 
     
+    
     #target = np.zeros([len(projects), 1], dtype=np.int)
-    #target[:,0] = np.array([p.result == 1 for p in projects])
-    #np.savetxt("target.csv", target)
+    #np.savetxt("altBinaryTarget.csv", target)
     
 if __name__ == '__main__':
     main()

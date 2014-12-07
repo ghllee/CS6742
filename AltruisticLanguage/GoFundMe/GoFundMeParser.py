@@ -163,6 +163,13 @@ def getNGrams(stringIn, n, toLower = True, removePunct = False):
 
 def main():
     projects = set(loadProjects("output"))
+    catDict = defaultdict(list)
+    for p in projects: catDict[p.category].append(p)
+    
+    for k,v in catDict.iteritems():
+        with open("projectTexts/" + k + ".pickle", 'w+') as f:
+            pickle.dump([x.text for x in v], f, -1)
+
     myTexts = [p.text for p in projects]
     with open('GFMText.pickle','w') as f:
         pickle.dump(myTexts, f, -1)
