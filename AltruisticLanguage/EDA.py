@@ -452,19 +452,21 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
     validGrams = [v for v in validGrams if not
                   set.issubset(set(v.split()), set(stopwords.words('english')))]
 
-    print "Using {} n-grams".format(len(validGrams))
+    print "Found {} n-grams".format(len(validGrams))
 
     gramToVar = {}
     i = 1
+    print "Filtering..."
     for v in validGrams:
         if i % 1000 == 0: print i
         perDocList = []
         for cat, catCount in catCounter.iteritems():
             perDocList.append((gramCatCounter[cat][v]*.1)/catCount)
-        gramToVar[v] = np.var(perDocList)
+        gramToVar[v] = 1.0*(np.max(perDocList)-np.min(perDocList))/np.max(perDocList)
     validGrams = [x[0] for x in
-                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.75*len(gramToVar))]]
-    
+                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
+
+    print "Using {} n-grams".format(len(validGrams))
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
     for i in range(len(projects)):
         if i is not 0 and i % 100 == 0: print i
@@ -652,7 +654,7 @@ def main():
     #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
     #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
     #                            counts=False)
-    saveFeatureMatrixAndHeaders(projects, "all75Filter.mtx", "allHeaders75Filter.csv", control=False)
+    saveFeatureMatrixAndHeaders(projects, "all90Filter.mtx", "allHeaders90Filter.csv", control=False)
 
     #target = np.zeros([len(projects), 1], dtype=np.int)
     

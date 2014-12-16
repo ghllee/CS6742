@@ -4,13 +4,17 @@ library('glmnet')
 library('foreach')
 library('doParallel')
 
+registerDoParallel()
+
 topK <- 50
 rsort <- function(x) {
   sort(x, decreasing = TRUE)
 }
-myResult <- read.csv("altBinaryTarget.csv", header = F)$V1
+myData <- readMM("all.mtx", header = F)$V1
+headers <- read
 myDataControl <- readMM("controlsWithSucc.mtx")
 myData <- readMM("allWithSucc.mtx")
+myResultContinuous <- read.csv("altContinuousTarget.csv", header = F)$V1
 
 #NORMALS
 crossValid <- cv.glmnet(myData,
@@ -51,3 +55,27 @@ dev2 <- deviance(crossValidControl$glmnet.fit)[crossValidControl$lambda == bestl
 df1 <- crossValid$glmnet.fit$df[crossValid$lambda == bestlambda]
 df2 <- crossValidControl$glmnet.fit$df[crossValidControl$lambda == bestlambdaControl]
 1-pchisq(dev2-dev1, df1-df2)
+
+
+#Experiments with 20 percent
+perc20Control <- cv.glmnet(myDataControl,
+                           myResult20, type.measure = 'class',
+                               family="binomial", alpha=1, parallel=T)
+bestlambda20Control <-perc20Control$lambda.min
+mse.min20Control <- perc20Control$cvm[perc20Control$lambda == bestlambda20Control]
+myCoefs20Control <- coef(perc20Control, s=bestlambda20Control)
+myCoefMatrix20Control <- as.matrix(myCoefs20Control)
+colnames(myCoefMatrix20Control) <- c("Beta")
+headers20Control <- read.csv("controlHeadersWithSucc.csv")
+rownames(myCoefMatrix20Control) <- c("Intercept", colnames(headers20Control))
+
+apply(myCoefMatrix20Control, 2, sort)[1:topK,]
+apply(myCoefMatrix20Control, 2, rsort)[1:topK,]
+plot(perc20Control)
+
+
+perc20 <- cv.glmnet(myData, myResult20, type.measure = 'class', family="binomial", alpha=1, parallel=T)
+bestlambda20 <- perc20$lambda.min
+mse.min20 <- perc20$cvm[perc20$lambda == bestlambda20]
+
+test <- cv.glmnet(myDataControl, myResultContinous > .1, family="binomial", type.measure = "class", parallel = T)
