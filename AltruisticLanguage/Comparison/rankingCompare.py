@@ -15,7 +15,7 @@ with open(file1) as f:
         if len(line) == 0: continue
         tokens = line.split()
         nGram = ' '.join(tokens[:-1])
-        if len(tokens) != 2: continue
+        if len(tokens) != 4: continue
         ngramToID[nGram] = curId
         rank1.append(curId)
         curId += 1
@@ -26,15 +26,12 @@ with open(file2) as f:
     for line in f:
         if len(line) == 0: continue
         tokens = line.split()
-        if len(tokens) != 2: continue
+        if len(tokens) != 4: continue
         nGram = ' '.join(tokens[:-1])
         rank2.append(ngramToID[nGram])
 
-
-
-for nGram, ID in ngramToID.iteritems():
-    pass
-
+print [idToNgram[x] for x in rank1[:10]]
+print [idToNgram[x] for x in rank2[:10]]
 
 print len(rank1)
 print len(rank2)

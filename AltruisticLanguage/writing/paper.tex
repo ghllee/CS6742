@@ -26,7 +26,7 @@
 % proceedings, working notes, and technical reports.
 %
 \title{Pre-orders or Philanthropy: An Analysis of Altruism on Kickstarter}
-\author{Jack Hessel}
+\author{Jack Hessel \and Lillian Lee\\Cornell University}
 \maketitle
 \begin{abstract}
 \begin{quote}
@@ -147,26 +147,27 @@ Minimum Pledge & Minimum pledge to get a reward (dollars)\\\hline
 Video & Indicates whether or not the project has an associated video \\\hline
 Num Updates & Number of ``updates'' projects owners have posted \\\hline
 Num Comments & Number of user comments posted \\\hline
-Facebook Connected & Indicates whether or not project owners have personal Facebook profiles associated with Kickstarter\\\hline
-Success & Indicates whether or not the project was successful\\
+Facebook Connected & Indicates whether or not project owners have personal Facebook profiles associated with Kickstarter\\
 \hline
 \end{tabular}
 \caption{Descriptions of the control features used in the regression tasks.}
 \label{tab:controls}
 \end{table}
-How does Altruism manifest on Kickstarter? When a user backs a project on Kickstarter (which is impossible to do anonymously) they are prompted to select a backer reward of value less than or equal to their donation amount. If a user does not want to claim a reward but, rather, donate altruistically, there exists an option that allows them to claim no rewards. Because the total number of claims for each non-altruistic reward are displayed publicly on the project page, along with the total number of backers (altruistic and non-altruistic alike) we are able to compute the total number of purely altruistic donation events for each project. Furthermore, the site allows for users to give an amount exceeding the cost of a given reward, so we are able to compute the total amount donated to a project above and beyond the amount required for all the posted reward claims. As previously noted, altruistic donation events 
+How does altruism manifest on Kickstarter? When a user backs a project on Kickstarter (which is impossible to do anonymously) they are prompted to select a backer reward of value less than or equal to their donation amount. If a user does not want to claim a reward but, rather, donate altruistically, there exists an option that allows them to claim no rewards. Because the total number of claims for each non-altruistic reward are displayed publicly on the project page, along with the total number of backers (altruistic and non-altruistic alike) we are able to compute the total number of purely altruistic donation events for each project. Furthermore, the site allows for users to give an amount exceeding the cost of a given reward, so we are able to compute the total amount donated to a project above and beyond the amount required for all the posted reward claims. As previously noted, altruistic donation events constitute 10.59\% of all donation events and 21.59\% of all money donated in our dataset (over 53M dollars) was given away.
 
-In a similar vein to \cite{mitra2014language} we define a binary altruistic response variable and train two logistic regression classifiers to predict that variable. The response variable is defined as follows: if a project recieves any donations and the proportion of altruistic donations it recieves exceeds $10\%$, we assign it to the altruistic group, otherwise, it is assigned to the non-altruistic group. Defining this control variable partitions the dataset into 26733 altruistic projects and 19077 projects giving a constant prediction baseline of 58.34\% accuracy.
+In a similar vein to \cite{mitra2014language} we define a binary altruistic response variable and train several logistic regression classifiers to predict that variable. The response variable is defined as follows: if a project recieves any donations and the proportion of altruistic donations it recieves exceeds $10\%$, we assign it to the altruistic group, otherwise, it is assigned to the non-altruistic group. Defining this control variable partitions the dataset into 26733 altruistic projects and 19077 projects giving a constant prediction baseline of 58.34\% accuracy.
 
-Out first regression task consists of a controls-only baseline. The control variables we use mostly mirrors those used in Mitra and Gilbert's analysis, except we add their ``Success'' target as a control. The set of control variables consists of 49 binary variables, one for each Kickstarter project category (``Theater,'' ``Indie Rock,'' ``Open Software,'' etc.) and an additional 10 variables summarized in Table \ref{tab:controls}.
+Out first regression task consists of a controls-only baseline. The set of control variables, which mostly mirrors Mitra and Gilbert's control set, consists of 49 binary variables, one for each Kickstarter project category (``Theater,'' ``Indie Rock,'' ``Open Software,'' etc.) and an additional 10 variables summarized in Table \ref{tab:controls}.
 
-We use glmnet \cite{friedman2010glmnet} for our regression tasks. 
+We use glmnet \cite{friedman2010glmnet} for our regression tasks. glmnet is a software package that implements cyclic coordinate decent and is capable of performing penalized regression tasks on highly sparse datasets. For our experiments, we utilize an $L_1$ (lasso) regularization term in an attempt to enforce sparsity and derive a parsimonious model, and set glmnet to perform 10-fold cross validation to search for the optimal regularization coefficient. Notably, glmnet purposefully does not report standard errors on resulting feature coefficients because the regularization process intorudces substantial bias into the regression process.
 
-Our textual features consist of unigrams, bigrams, and trigrams from the project descriptions, FAQ question/answers, and reward descriptions of our Kickstarter projects. We apply a category filter, forcing all n-grams to appear in all 49 categories. Applying this filtration process, we end up with 30784 topic-controlled n-grams.
+Our best controls only logistic regression model had a cross-validation accuracy of 64.42\%, improving upon our constant prediction baseline by 6.08\%. The most important positive and negative predictive features were all Kickstarter category control variables. Dance, theater, public art, performance art, and classical music ($\vec{\beta} = \langle 1.84, 1.56, 1.24, 1.04, .930 \rangle$, respectively) were the categorical variables which were the strongest positive predictors, whereas board/card games, games, comics, video games, and product design ($\vec{\beta} = \langle -1.64, -1.23, -1.02, -.862, -.795 \rangle$, respectively) were the strongest negative predictors. This result indicates that product category is the most important factor in determining if a project will recieve altruistic donations, and perhaps that projects in artistic categories are more likely to recieve such Kickstarter backing. This result is fairly unsurprising -- artistic endevours are generally regarded as intrinsically valuable to society (CITECITECITE), and the negatively predictive categories tend to have concretely associated products with their projects (a video game, for instance). Some non-categorical positive predictors included
 
-Our best controls only logistic regression model had a cross-validation accuracy of 65.27\%.
+Our textual features consist of binary indicator variables for unigrams, bigrams, and trigrams in the project descriptions, FAQ question/answers, and reward descriptions of our Kickstarter projects. We apply both a category filter and a variance filter to determine our resulting n-gram set. Our category filter requires all n-grams to appear in all 49 categories. For our variance filter, we consider the usage of a given n-gram over all categories, and compute the variance of the resulting multinomial distribution. Finally, we remove from consideration the most variable 25\% of n-grams. Applying this two-part filtration process, we end up with 30784 category and variance filtered n-grams.
 
-When we incorporate lingustic features, our cross-validation accuracy XXXXX.
+The goal of this filtration process is to produce a set of n-grams that are independent of topic. For instance, because the term ``art project'' is used significantly more readily in artistic Kickstarter categories, its significance in regression is more topically meaningful than lingustically meaningful, as the corresponding covariate is highly colinear with the artistic category indicator variables.
+
+When we incorporate these particular lingustic features, our cross-validation accuracy XXXXX.
 
 \section{Failing Projects, More Donations?}
 

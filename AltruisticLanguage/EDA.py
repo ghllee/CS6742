@@ -14,6 +14,7 @@ from sklearn import preprocessing
 from scipy.sparse import csr_matrix
 from scipy.io import mmwrite
 import matplotlib.pyplot as plt
+import operator
 
 class _GetchUnix:
     def __init__(self):
@@ -417,8 +418,13 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category. If counts = True, then the return matrix has counts features, if counts=False, then the return matrix has binary indicators'''
     #dict mapping from category -> set of n grams in that category
     catGramDict = defaultdict(set)
+    #gram -> category -> count of that gram in that category
+    gramCatCounter = defaultdict(lambda: Counter())
     #counter mapping from n-gram -> count
     nGramCounter = Counter()
+
+    #maps from category -> numProjects in that category
+    catCounter = Counter()
 
     myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
 
@@ -436,17 +442,48 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
                 nGrams.extend(myGramFun(f.answer,n))
             for g in nGrams:
                 nGramCounter[g] += 1
+                gramCatCounter[p.category][g] += 1
                 docCounter[p][g] += 1
             catGramDict[p.category].update(set(nGrams))
-
+            catCounter[p.category] += 1
     
     validGrams = [x for x in set.intersection(*catGramDict.values()) if nGramCounter[x] >= minOccur]
 
-    validGrams = [v for v in validGrams if not
-                  set.issubset(set(v.split()), set(stopwords.words('english')))]
+    print "Found {} n-grams".format(len(validGrams))
 
-    print "Using {} n-grams".format(len(validGrams))
+    gramToVar = {}
+    i = 1
+    print "Filtering..."
+    for v in validGrams:
+        if i % 1000 == 0: print i
+        perDocList = []
+        for cat, catCount in catCounter.iteritems():
+            perDocList.append((gramCatCounter[cat][v]*.1)/catCount)
+        gramToVar[v] = 1.0*(np.max(perDocList)-np.min(perDocList))/np.max(perDocList)
+    validGrams = [x[0] for x in
+                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
+
     
+    #print "Using {} n-grams".format(len(validGrams))
+    #with open('kickstarterSW.ngrams','w') as f:
+    #    words = ""
+    #    for v in validGrams:
+    #        words += v + "\n"
+    #    f.write(words[:-1])
+
+
+    #validGrams = [v for v in validGrams if not
+    #              set.issubset(set(v.split()), set(stopwords.words('english')))]
+
+    #print "Using {} n-grams".format(len(validGrams))
+    #with open('kickstarter.ngrams','w') as f:
+    #    words = ""
+    #    for v in validGrams:
+    #        words += v + "\n"
+    #    f.write(words[:-1])
+
+    #quit()
+
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
     for i in range(len(projects)):
         if i is not 0 and i % 100 == 0: print i
@@ -544,7 +581,7 @@ def crossValidate(dataMatrix, target, k=5):
 
     return aveAcc/k
 
-def saveFeatureMatrixAndHeaders(projects, matrixOut, targetOut, headersOut,
+def saveFeatureMatrixAndHeaders(projects, matrixOut, headersOut,
                                 control = False, given = None, counts = True):
     '''Given a list of projects, filenames for the output matrix/target/header data, and whether or not you just want the control matrix, outputs the requested data to the requested files.'''
     if not control:
@@ -554,36 +591,37 @@ def saveFeatureMatrixAndHeaders(projects, matrixOut, targetOut, headersOut,
             featureMatrix1, ngrams = extractGivenTextFeatures(projects, given, counts=counts)
     featureMatrix2, cats = getCategoryControlFeatures(projects)
     featureMatrix3, controls = getExtraControlFeatures(projects)
-    target = np.zeros([len(projects), 1], dtype=np.int)
-    #target[:,0] = np.array([p.result == 1 for p in projects])
-    #target[:,0] = np.array([p.backers - sum([y.numBackers for y in p.rewards]) for p in projects])
-    target[:,0] = np.array([0 if p.backers == 0 else
-                            (p.backers - sum([y.numBackers for y in p.rewards]))/(1.0*p.backers)>.1
-                            for p in projects])
+    
+    numBackers = np.zeros([len(projects), 1], dtype=np.int)
+    numAltruistic = np.zeros([len(projects), 1], dtype=np.int)
+    numBackers[:,0] = np.array([p.backers for p in projects])
+    numAltruistic[:,0] = np.array([(p.backers - sum([y.numBackers for y in p.rewards]))
+                                   for p in projects])
 
     if not control: ngrams = ['T' + g for g in ngrams]
     cats = ['C' + c for c in cats]
     controls = ['O' + o for o in controls]
+    targets = ["numBackers, numAltruistic"]
 
     if not control:
         data = np.concatenate([featureMatrix1,
                                featureMatrix2,
-                               featureMatrix3],axis = 1)
+                               featureMatrix3, numBackers, 
+                               numAltruistic],axis = 1)
     else:
         data = np.concatenate([featureMatrix2,
-                               featureMatrix3],axis = 1)
+                               featureMatrix3, numBackers, numAltruistic] ,axis = 1)
 
     if not control:
         headers = np.concatenate([ngrams,
                                   cats,
-                                  controls])
+                                  controls, targets])
     else:
         headers = np.concatenate([cats,
-                                  controls])
+                                  controls, targets])
 
     sparseMatrix = csr_matrix(data)
     mmwrite(matrixOut, sparseMatrix)
-    np.savetxt(targetOut, target)
     with open(headersOut, 'w') as f:
         f.write(",".join(headers) + "\n") 
 
@@ -623,7 +661,7 @@ def compareMineToTheirs(projects):
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
-    categoryAltruisticPropTest(projects)
+    #categoryAltruisticPropTest(projects)
     #basicStats(projects)
     #texts = [p.text for p in projects]
     #extractTextFeatures(projects, minOccur = 50, nGram = 3)
@@ -633,10 +671,14 @@ def main():
     #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
     #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
     #                            counts=False)
-    #saveFeatureMatrixAndHeaders(projects, "allWithSucc.mtx",
-    #                            "targetAltCounts.csv", "allHeadersWithSucc.csv", control=False)
+    saveFeatureMatrixAndHeaders(projects, "all90Filter.mtx", "allHeaders90Filter.csv", control=False)
 
+    #target = np.zeros([len(projects), 1], dtype=np.int)
     
+    #target = np.array([0 if p.backers == 0
+    #                   else
+    #                   1.*(p.backers - sum([y.numBackers for y in p.rewards]))/(1.0*p.backers)>.1
+    #                   for p in projects])
     
     #target = np.zeros([len(projects), 1], dtype=np.int)
     #np.savetxt("altBinaryTarget.csv", target)

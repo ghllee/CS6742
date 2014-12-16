@@ -4,6 +4,7 @@ import string
 from collections import defaultdict, Counter
 import numpy as np
 from nltk.corpus import stopwords
+import operator
 
 exclude = set(string.punctuation)
 
@@ -54,21 +55,43 @@ def extractTextFeatures(products, minOccur = 50, nGram = 3):
     '''Given a list of products, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category.'''
     myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
     validGrams = []
+    
+    gramCatCounter = defaultdict(lambda: Counter())
+    nGramCounter = Counter()
+    catCounter = Counter()
+    catGramDict = defaultdict(set)
+
 
     for n in range(1,nGram+1):
-        catGramDict = defaultdict(set)
-        nGramCounter = Counter()
         print "Extracting " + str(n) + "-grams"
         for p in products:
             nGrams = myGramFun(p.description, n)
             for g in nGrams:
                 nGramCounter[g] += 1
+                for c in p.mainCats:
+                    gramCatCounter[c][g] += 1
             for c in p.mainCats:
                 catGramDict[c].update(set(nGrams))
-        curValidGrams = [x for x in proportionalIntersection(catGramDict.values(), proportion=.7)
+                catCounter[c] += 1
+        curValidGrams = [x for x in proportionalIntersection(catGramDict.values(), proportion=1)
                          if nGramCounter[x] > minOccur]
 
         validGrams.extend(curValidGrams)
+
+    print catCounter
+
+    gramToVar = {}
+    i = 1
+    print "Filtering..."
+    for v in validGrams:
+        if i % 1000 == 0: print i
+        perDocList = []
+        for cat, catCount in catCounter.iteritems():
+            perDocList.append((gramCatCounter[cat][v]*.1)/catCount)
+        gramToVar[v] = 1.0*(np.max(perDocList)-np.min(perDocList))/np.max(perDocList)
+
+    validGrams = [x[0] for x in
+                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
 
     with open('amazon50SW.ngrams','w') as f:
         words = ""
@@ -120,8 +143,25 @@ def readProductsFromFile(descriptions, categories):
                 if idToProduct[curId].mainCats[-1] == '':
                     print line
 
-    return [x for x in idToProduct.values() if len(x.mainCats) != 0 and
-            len(x.description) > 0]
+    products = [x for x in idToProduct.values() if len(x.mainCats) != 0 and
+                len(x.description) > 0]
+    catCounterFilter = Counter()
+    for p in products:
+        for c in p.mainCats:
+            catCounterFilter[c] += 1
+
+    otherCats = []
+    for cat, count in catCounterFilter.iteritems():
+        if count < .025*len(products): otherCats.append(cat)
+
+    for p in products:
+        hasOther = False
+        for cat in p.mainCats:
+            if cat in otherCats: hasOther = True
+        if hasOther:
+            p.mainCats = [x for x in p.mainCats if x not in otherCats]
+            p.mainCats.append("OTHER")
+    return products
 
 def loadFromFile(name):
     with open(name) as f:
@@ -129,13 +169,12 @@ def loadFromFile(name):
     return products
 
 def main():
-    pass
-    products = loadFromFile("products.pickle")
-    #products = readProductsFromFile("descriptions.txt","categories.txt")
-    extractTextFeatures(products)
-    #pickle.dump(products, open("products.pickle",'w'), -1)
-
     
+    #products = readProductsFromFile("descriptions.txt","categories.txt")
+    #pickle.dump(products, open("products.pickle",'w'), -1)
+    #pickle.dump([p.description for p in products], open('amazontext.pickle','w'), -1)
+    products = loadFromFile("products.pickle")
+    extractTextFeatures(products)
     
 
 if __name__ == "__main__":
