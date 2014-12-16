@@ -449,9 +449,6 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
     
     validGrams = [x for x in set.intersection(*catGramDict.values()) if nGramCounter[x] >= minOccur]
 
-    validGrams = [v for v in validGrams if not
-                  set.issubset(set(v.split()), set(stopwords.words('english')))]
-
     print "Found {} n-grams".format(len(validGrams))
 
     gramToVar = {}
@@ -466,7 +463,27 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
     validGrams = [x[0] for x in
                   sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
 
-    print "Using {} n-grams".format(len(validGrams))
+    
+    #print "Using {} n-grams".format(len(validGrams))
+    #with open('kickstarterSW.ngrams','w') as f:
+    #    words = ""
+    #    for v in validGrams:
+    #        words += v + "\n"
+    #    f.write(words[:-1])
+
+
+    #validGrams = [v for v in validGrams if not
+    #              set.issubset(set(v.split()), set(stopwords.words('english')))]
+
+    #print "Using {} n-grams".format(len(validGrams))
+    #with open('kickstarter.ngrams','w') as f:
+    #    words = ""
+    #    for v in validGrams:
+    #        words += v + "\n"
+    #    f.write(words[:-1])
+
+    #quit()
+
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
     for i in range(len(projects)):
         if i is not 0 and i % 100 == 0: print i
