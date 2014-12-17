@@ -51,26 +51,27 @@ We argue that crowdfunding sites similar to Kickstarter occupy a unique space be
 \multicolumn{2}{|c}{Unigrams} & \multicolumn{2}{|c}{Bigrams} & \multicolumn{2}{|c}{Trigrams} & 
 \multicolumn{2}{|c}{Unigrams} & \multicolumn{2}{|c}{Bigrams} & \multicolumn{2}{|c|}{Trigrams} \\ \hline 
 Unigram & Z & Bigram & Z & Trigram & Z & Unigram & Z & Bigram & Z & Trigram & Z \\ \hline
-the & -77.74 & of the & -42.64 & check out the & -10.43 &
-project & -366.62 & thank you & -186.89 & be able to & -141.92 \\ \hline
-project & -57.09 & the story & -20.99 & a series of & -9.97 &
-film & -326.85 & want to & -185.62 & thank you for & -112.63 \\ \hline
-film & -48.74 & the book & -20.89 & in new york & -9.90 &
-help & -293.91 & to make & -168.24 & would like to & -100.47 \\ \hline
-music & -43.55 & to create & -20.33 & copy of the & -9.22 &
-us & -278.78 & able to & -159.11 & a part of & -94.38 \\ \hline
-of & -35.23 & the game & -18.85 & be used to & -9.13 &
-money & -252.97 & be able & -142.71 & in order to & -93.87 \\ \hline \hline
-she & 84.92 & thank you & 41.65 & to be able & 19.55 &
-university & 88.20 & variety of & 40.80 & a member of & 24.97\\ \hline
-her & 91.96 & i have & 52.57 & thank you for & 20.75 &
-title & 90.43 & comes with & 43.74 & member of the & 27.22 \\ \hline
-family & 98.57 & to help & 55.70 & to go to & 25.35 &
-author & 91.92 & available in & 43.94 & is one of & 27.58 \\ \hline
-my & 114.84 & and i & 60.22 & friends and family & 27.44 &
-features & 102.99 & designed to & 46.39 & a variety of & 29.95 \\ \hline
-i & 136.98 & i am & 81.20 & family and friends & 31.12 &
-text & 115.04 & university of & 62.84 & one of the & 30.92 \\ \hline
+the & -77.52 & of the & -42.74 & be used to & -9.05 &
+we & -685.35 & will be & -367.20 & be able to & -141.92 \\\hline
+of & -42.74 & to create & -20.17 & some of the & -8.26 &
+i & -525.09 & we are & -256.59 & tank you for & -112.63 \\\hline
+new & -26.01 & on the & -19.96 & will be a & -6.25 &
+will & -514.99 & we have & -218.54 & a part of & -94.38 \\\hline
+show & -25.24 & about the & -16.48 & be used for & -6.07 &
+our & -501.84 & we will & -193.24 & in order to & -93.87 \\\hline
+create & -23.99 & and the & -15.65 & to make the & -6.02 &
+be & -356.80 & thank you & -186.89 & to make this & -92.88 \\\hline \hline
+
+me & 80.57 & would be & 37.02 & take care of & 16.27 &
+perfect & 64.77 & is the & 48.67 & the united states & 2.88 \\\hline
+was & 82.01 & name is & 37.74 & to help with & 17.72 &
+has & 73.00 & and is & 54.69 & is a great & 3.75\\\hline
+am & 82.62 & family and & 40.60 & in need of & 19.04 &
+with & 78.24 & with a & 56.31 & is one of & 27.54\\\hline
+family & 98.81 & thank you & 41.80 & thank you for & 20.38 &
+includes & 81.00 & has a & 56.71 & of the most & 30.88\\\hline
+i & 136.42 & to help & 55.71 & friends and family & 27.25 &
+easy & 82.72 & out of & 71.67 & one of the & 30.97 \\\hline
 \end{tabular}
 \caption{Summary of Bayesian analysis of language comparing Kickstarter to GoFundMe and Amazon. Negative Z-scores correspond to Kickstarter. Top ten most significant n-grams are presented.}
 \label{tab:pairwise}
@@ -95,11 +96,11 @@ To compare the language used on Kickstarter to purely commercial and purely altr
 
 In order to use this model, one must first define a vocabulary. Because we are interested in language rather than specific subject matter, we apply a cross-categorical filtering scheme in an attempt to control for topic. Recall that in each of our datasets, documents are associated with one or more categories. To control for topic, we extract all n-grams of interest that appear in some minimum proportion of all categories, as well as (optionally) a minimum number of times throughout the dataset. For each of our three datasets, we examine unigrams, bigrams, and trigrams, and choose such that each dataset is roughly equally represented. For our particular parameter filtrations, we derive 24K n-grams from Kickstarter, 24K n-grams from GoFundMe, and 28K n-grams from Amazon. Finally, an intersection of these sets provides the final 7K n-gram vocabulary of interest.
 
-The results of these analyses are summarized in Table \ref{tab:pairwise}. In general, our model and filtration scheme succeeds in controling for topic, though some artifacts remain. For instance, a majority of the Amazon reviews in our corpus are book reviews, which potentially obscures the intersting use of n-grams like ``university of,'' ``author,'' and ``title.'' Despite these artifacts, XXXXX.
+The results of these analyses are summarized in Table \ref{tab:pairwise}. 
 
-To emperically analyze these n-gram comparisons, we first rank the n-grams in each experiment by their z-scores and compute the Spearman correlation between the Kickstarter vs. Amazon and Kickstarter vs. GoFundMe analyses. The intuition behind this comparsion is as follows: if Kickstarter is more altruistic than Amazon, but less altruistic than GoFundMe, then we would expect altruistically-associated n-grams to be on opposite ends of each ranking. We compute rankings and correlation statistics for unigrams, bigrams, and trigrams seperately.
+To emperically analyze these n-gram comparisons, we first rank the n-grams in each experiment by their z-scores and compute Kendall's tau correlation between the Kickstarter vs. Amazon and Kickstarter vs. GoFundMe analyses. The intuition behind this comparsion is as follows: if Kickstarter is more altruistic than Amazon, but less altruistic than GoFundMe, then we would expect altruistically-associated n-grams to be on opposite ends of each ranking.
 
-For the 3391 unigrams, we find a negative correlation as expected, but the significance of this correlation could not be verified ($\rho = -.010, p = .55$). As we extend our analysis to more complex lingustic features such as bigrams and trigrams, which are less sensitive to unfiltered topical noise and likely carry more signal regarding the use of language, the negative correlation between these two rankings becomes more clear. For the 4195 bigrams, we see a significant negative correlation ($\rho = -.038, p < .02$) and for the 898 trigrams, we see a large significant negative correlation ($\rho = -.11, p < .002$).
+For all 2077 n-grams, we observe a statistically significant negative correlation between the rankings ($\tau = -.035, p = .016$). In addition, we compute rankings and correlation statistics for our 1119 unigrams, 1101 bigrams, and trigrams seperately. As we shift our focus from unigrams ($\tau = -.024, p = .23$) to bigrams ($\tau = -.038, p = .061$) to trigrams ($\tau = -.041, p < .01$) the negative correlation between the rankings both becomes greater and more significant. This is likely because more lingustic signal can be carried by phrases of increasing length.
 
 Overall, we argue this analysis demonstrates that discourse on Kickstarter is neither entirely Amazon-like, nor entirely GoFundMe-like, but rather lies in its own lingustic regime at the intersection of altruism and commercialism.
 
