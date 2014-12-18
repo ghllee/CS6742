@@ -26,7 +26,7 @@
 % proceedings, working notes, and technical reports.
 %
 \title{Pre-orders or Philanthropy: An Analysis of Altruism on Kickstarter}
-\author{Jack Hessel \and Lillian Lee\\Cornell University}
+\author{Jack Hessel}
 \maketitle
 \begin{abstract}
 \begin{quote}
@@ -54,7 +54,7 @@ Unigram & Z & Bigram & Z & Trigram & Z & Unigram & Z & Bigram & Z & Trigram & Z 
 the & -77.52 & of the & -42.74 & be used to & -9.05 &
 we & -685.35 & will be & -367.20 & be able to & -141.92 \\\hline
 of & -42.74 & to create & -20.17 & some of the & -8.26 &
-i & -525.09 & we are & -256.59 & tank you for & -112.63 \\\hline
+i & -525.09 & we are & -256.59 & thank you for & -112.63 \\\hline
 new & -26.01 & on the & -19.96 & will be a & -6.25 &
 will & -514.99 & we have & -218.54 & a part of & -94.38 \\\hline
 show & -25.24 & about the & -16.48 & be used for & -6.07 &
@@ -90,50 +90,63 @@ These observations and previous work motivate our research questions: how does t
 \section{Kickstarter vs. GoFundMe and Amazon}
 What language used on Kickstarter is altruistic? What language used on Kickstarter is commercial? To address these questions, it might be possible to derive stringent definitions of altruism and salespersonship. However, for our analysis, we resort to a more objective analysis by incorporating two additional data sets, one from Amazon and one from GoFundMe.
 
-Amazon is a very popular online marketplace, where users can purchase items from a wide range of categories. Each product is associated with a description and and a set of categories. Our dataset consists of just under 1.5M Amazon product descriptions \cite{mcauley2013hidden}. We believe that Amazon product descriptions can be considered as purely commercial. On the other hand, GoFundMe is a crowdfunding site similar to Kickstarter, but campaigns are generally more focused on charitable/personal ventures. For instance, a popular category on GoFundMe is ``Medical,'' wherein users create pages to raise money for medical expenses for family and friends. Our dataset consists of 7.7K GoFundMe project descriptions. In contrast to Kickstarter, in a vast majority of cases GoFundMe contributors don't have the option to select compensentory rewards, and we therefore regard our GoFundMe data as requests for purely altruistic actions.
+Amazon is a very popular online marketplace, where users can purchase items from a wide range of categories. Each product is associated with a description and and a set of categories. Our dataset consists of just over 1M Amazon product descriptions \cite{mcauley2013hidden}. We believe that Amazon product descriptions can be considered as purely commercial. On the other hand, GoFundMe is a crowdfunding site similar to Kickstarter, but campaigns are generally more focused on charitable/personal ventures. For instance, a popular category on GoFundMe is ``Medical,'' wherein users create pages to raise money for medical expenses for family and friends. Our dataset consists of 7.7K GoFundMe project descriptions. In contrast to Kickstarter, in a vast majority of cases GoFundMe contributors don't have the option to select compensentory rewards, and we therefore regard our GoFundMe data as requests for purely altruistic actions.
 
 To compare the language used on Kickstarter to purely commercial and purely altrustic pitches, we adopt a Bayesian approach that has previously been successful in comparing the language used by two political parties on a specific issue \cite{monroe2008fightin}. This model has been used to compare word usage between two corpora in a princpled way. Under the model, language is modeled as a ``bag of words'' represented by a multinomial distribution over vocabulary items. For the two corpora in question, we assume that their language vectors are drawn from a Dirichlet prior. Though it is possible in this scenario to encode useful information in the prior, we find it sufficient to utilize an uninformative prior and set our Dirichlet hyperparameter to be $\alpha=.01$. Assuming this language model, it becomes possible to compute approximate differences in vocabulary usages, and approximate variances of those differences.
 
-In order to use this model, one must first define a vocabulary. Because we are interested in language rather than specific subject matter, we apply a cross-categorical filtering scheme in an attempt to control for topic. Recall that in each of our datasets, documents are associated with one or more categories. To control for topic, we extract all n-grams of interest that appear in some minimum proportion of all categories, as well as (optionally) a minimum number of times throughout the dataset. For each of our three datasets, we examine unigrams, bigrams, and trigrams, and choose such that each dataset is roughly equally represented. For our particular parameter filtrations, we derive 24K n-grams from Kickstarter, 24K n-grams from GoFundMe, and 28K n-grams from Amazon. Finally, an intersection of these sets provides the final 7K n-gram vocabulary of interest.
+In order to use this model, one must first define a vocabulary. Because we are interested in language rather than specific subject matter, we apply a cross-categorical filtering scheme in an attempt to control for topic. Recall that in each of our datasets, documents are associated with one or more categories. In a first attempt to control for topic, we first apply a filter that removes all n-grams that don't appear in all categories at least once. We found this simple filtration scheme to be inadequate -- the words ``book,'' ``publisher,'' and ``author,'' for instance, appear very frequently in the Amazon dataset because about 78\% of the products in the Amazon dataset are tagged under the Book category.
 
-The results of these analyses are summarized in Table \ref{tab:pairwise}. 
+To apply a more stringent topic controlling filter after removing n-grams that don't appear in all categories, for each n-gram $n$, we compute the intra-category document frequency denoted $f_n^c$ for all categories $c$. We then compute the ``normalized width'' $w_n$ for n-gram $n$ as...
 
-To emperically analyze these n-gram comparisons, we first rank the n-grams in each experiment by their z-scores and compute Kendall's tau correlation between the Kickstarter vs. Amazon and Kickstarter vs. GoFundMe analyses. The intuition behind this comparsion is as follows: if Kickstarter is more altruistic than Amazon, but less altruistic than GoFundMe, then we would expect altruistically-associated n-grams to be on opposite ends of each ranking.
+\begin{equation} \label{eq:spread}
+w_n = \frac{\max\limits_{c'}f_n^{c'} - \min\limits_{c'}f_n^{c'}}{\max\limits_{c'}f_n^{c'}}
+\end{equation}
+
+The intuition behind normalized width is as follows -- if a word appears in all categories with roughly the same frequency, the normalized spread will be small. If a word appears very frequently in a single category, the normalized width will be large. After computing all normalized widths, we filter out the 10\% of n-grams with highest normalized width.
+
+After this two-part filtration scheme is applied to all three datasets, we take an intersection of the resulting n-grams to form our final vocabulary, which contains 2077 n-grams. The results of these analyses are summarized in Table \ref{tab:pairwise}.
+
+These rankings clearly illustrate the commecial language used on Amazon and the altruistic language used on GoFundMe, when compared to Kickstarter. For instance, the most Amazon-like unigrams, ``easy,'' ``includes,'' ``with,'' ``has,'' and ``perfect,'' are highly sales oriented, whereas the most Kickstarter-like n-grams are more focused on personal appeals and promise of future improvement. Conversely, even a coursory examinination of the trigrams in the GoFundMe versus Kickstarter analysis reveals clear differences in lingustic content. Project curators in the more altruistic setting are clearly more focused on personal appeals when compared to Kickstarter.
+
+To emperically analyze these n-gram comparisons, we first rank the n-grams in each experiment by their z-scores and compute Kendall's tau correlation between the Kickstarter vs. Amazon and Kickstarter vs. GoFundMe analyses. The intuition behind this comparsion is as follows: if Kickstarter is more altruistic than Amazon, but less altruistic than GoFundMe, then we would expect altruistically-associated n-grams to be on opposite ends of each ranking. This phenomenon occurs 
 
 For all 2077 n-grams, we observe a statistically significant negative correlation between the rankings ($\tau = -.035, p = .016$). In addition, we compute rankings and correlation statistics for our 1119 unigrams, 1101 bigrams, and trigrams seperately. As we shift our focus from unigrams ($\tau = -.024, p = .23$) to bigrams ($\tau = -.038, p = .061$) to trigrams ($\tau = -.041, p < .01$) the negative correlation between the rankings both becomes greater and more significant. This is likely because more lingustic signal can be carried by phrases of increasing length.
 
 Overall, we argue this analysis demonstrates that discourse on Kickstarter is neither entirely Amazon-like, nor entirely GoFundMe-like, but rather lies in its own lingustic regime at the intersection of altruism and commercialism.
-
 \section{What do Altruistic Requests Look Like?}
 
 \begin{table}
 \centering
 \footnotesize
-\begin{tabular}{|l|l|L{2.8cm}|}
+\begin{tabular}{|l|L{2.8cm}|}
 \hline
-Cluster Name & Number of Sentences & Top 3 Trigrams \\\hline
- & 551 & \specialcell{`one of the'\\`all of the'\\`is one of'} \\\hline
- & 275 & \specialcell{`is too small'\\`you can help'\\`you can give'} \\\hline
- & 288 & \specialcell{`thank you for'\\`you for your'\\`thank you so'}\\\hline
- & 1190 & \specialcell{`be able to'\\`to be able'\\`\# year old'}\\\hline
- & 708 & \specialcell{`to the hospital'\\`to the er'\\`him to the'}\\\hline
- & 457 & \specialcell{`to help with'\\`would like to'\\`and his family'}\\\hline
- & 641 & \specialcell{`in the hospital'\\`\# year old'\\`is in the'} \\\hline
- & 437 & \specialcell{`was diagnosed with'\\`my name is'\\`\# years old'} \\\hline
- & 498 & \specialcell{`we are asking'\\`are asking for'\\`family and friends'} \\\hline 
- & 334 & \specialcell{`be greatly appreciated'\\`will be greatly'\\`will be a'} \\\hline
- & 216 & \specialcell{`he is a'\\`he is in'\\`\# years old'} \\\hline
-Etcetera & 1520 & \specialcell{'to be a'\\`as well as'\\`to and from'} \\\hline
+Number of Sentences & Top 3 Trigrams \\\hline
+551 & \specialcell{`one of the'\\`all of the'\\`is one of'} \\\hline
+275 & \specialcell{`is too small'\\`you can help'\\`you can give'} \\\hline
+288 & \specialcell{`thank you for'\\`you for your'\\`thank you so'}\\\hline
+1190 & \specialcell{`be able to'\\`to be able'\\`\# year old'}\\\hline
+708 & \specialcell{`to the hospital'\\`to the er'\\`him to the'}\\\hline
+457 & \specialcell{`to help with'\\`would like to'\\`and his family'}\\\hline
+641 & \specialcell{`in the hospital'\\`\# year old'\\`is in the'} \\\hline
+437 & \specialcell{`was diagnosed with'\\`my name is'\\`\# years old'} \\\hline
+498 & \specialcell{`we are asking'\\`are asking for'\\`family and friends'} \\\hline 
+334 & \specialcell{`be greatly appreciated'\\`will be greatly'\\`will be a'} \\\hline
+216 & \specialcell{`he is a'\\`he is in'\\`\# years old'} \\\hline
+1520* & \specialcell{'to be a'\\`as well as'\\`to and from'} \\\hline
 \end{tabular}
-\caption{Clustering derived from the content model.}
+\caption{Clustering derived from the content model. The asterisk indicates the etcetera cluster.}
 \label{tab:contentmodel}
 \end{table}
 
-To analyze the sequential structure of requests, we run a case study on a subset of data utilizing a content model \cite{barzilay2004catching} to produce a sentence clustering. A content model is an unsupervized learning algorithm that operates on the sentence level, takes information order into account, and learns transition probabilities between sentence types. Here we provide a brief description of the content model, along with its basic goals and limitations.
+To analyze the sequential structure of requests, we run a case study on a subset of data utilizing a content model \cite{barzilay2004catching} to produce a sentence clustering. A content model is an unsupervized learning algorithm that operates on the sentence level, takes information order into account, and learns transition probabilities between sentence types. Here we provide a brief overview of the content model algorithm; for a fuller description, consult the original paper.
 
-BLAH
+The goal of a content model is to learn a set of sentence clusters utilizing ordering information. Given a set of $N$ documents where document $n$ has $s_n$ sentences, sentences are first clustered into $k$ groups according to bigram features using complete-link clustering with a cosine distance metric. After sentences are clustered into these groups, we merge all clusters smaller than some threshold into an ``etcetera'' cluster. This etcetera cluster is a unique feature of the content model that allows it the flexibility to sort sentences that otherwise don't fit into an ``other'' cluster. After this merging process, we are left with $m$ clusters. 
 
-We apply the content model to a small subset of the GoFundMe corpus (460 documents with a total of 7K sentences) corresponding to the campaigns listed in the ``Medical'' category. We utilize 11 content clusters and 1 etcetera cluster in our model. After our expectation maximization converged, we were left with the clusters displayed in Table \ref{tab:contentmodel}.
+For each of the resulting non-etcetera clusters, we train a smoothed bigram language model which is able to assign probabilities to input sentences. For the etcetera cluster, we train a ``complentary'' language model which assigns high probability to sentences that all other language models assign low probability to.
+
+After training these language models, we now treat each clustering as a state in a Hidden Markov Model, and all input documents as emissions from that Hidden Markov Model. We are able to compute the Viterbi path for each document, and we re-cluster sentences based on these most-likely paths. Finally, we retrain each of the language models based on the new clustering. This process of re-clustering, computing Viterbi paths, and re-training language models in an expectation maximization like fashion is executed until 
+
+We apply the content model to a small subset of the GoFundMe corpus (460 documents with a total of 7K sentences) corresponding to the campaigns listed in the ``Medical'' category. We utilize 11 content clusters and 1 etcetera cluster in our model. Though the original literature sugguests a larger number of clusters (30+) we opt for a smaller, interpretable analysis because our resulting model was not used for any information ordering or information extraction tasks, as in \cite{barzilay2004catching}. After our expectation maximization converged, we were left with the order-aware sentence clusters displayed in Table \ref{tab:contentmodel}.
 
 \section{Prediction of Altruism on Kickstarter}
 \begin{table}
@@ -156,7 +169,7 @@ Facebook Connected & Indicates whether or not project owners have personal Faceb
 \end{table}
 How does altruism manifest on Kickstarter? When a user backs a project on Kickstarter (which is impossible to do anonymously) they are prompted to select a backer reward of value less than or equal to their donation amount. If a user does not want to claim a reward but, rather, donate altruistically, there exists an option that allows them to claim no rewards. Because the total number of claims for each non-altruistic reward are displayed publicly on the project page, along with the total number of backers (altruistic and non-altruistic alike) we are able to compute the total number of purely altruistic donation events for each project. Furthermore, the site allows for users to give an amount exceeding the cost of a given reward, so we are able to compute the total amount donated to a project above and beyond the amount required for all the posted reward claims. As previously noted, altruistic donation events constitute 10.59\% of all donation events and 21.59\% of all money donated in our dataset (over 53M dollars) was given away.
 
-In a similar vein to \cite{mitra2014language} we define a binary altruistic response variable and train several logistic regression classifiers to predict that variable. The response variable is defined as follows: if a project recieves any donations and the proportion of altruistic donations it recieves exceeds $10\%$, we assign it to the altruistic group, otherwise, it is assigned to the non-altruistic group. Defining this control variable partitions the dataset into 26733 altruistic projects and 19077 projects giving a constant prediction baseline of 58.34\% accuracy.
+In a similar vein to \cite{mitra2014language} we define a binary altruistic response variable and train several logistic regression classifiers to predict that variable. The response variable is defined as follows: if a project recieves any donations and the proportion of altruistic donations it recieves exceeds $10\%$, we assign it to the altruistic group, otherwise, it is assigned to the non-altruistic group. Defining this control variable partitions the dataset into 26733 altruistic projects and 19077 non-altruistic projects giving a constant prediction baseline of 58.34\% accuracy.
 
 Out first regression task consists of a controls-only baseline. The set of control variables, which mostly mirrors Mitra and Gilbert's control set, consists of 49 binary variables, one for each Kickstarter project category (``Theater,'' ``Indie Rock,'' ``Open Software,'' etc.) and an additional 10 variables summarized in Table \ref{tab:controls}.
 
