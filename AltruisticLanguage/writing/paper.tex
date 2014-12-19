@@ -14,6 +14,14 @@
 \newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newenvironment{blockquote}{%
+  \par%
+  \setlength{\parskip}{.5em}
+  \small
+  \medskip
+  \leftskip=3em\rightskip=3em%
+  \noindent\ignorespaces}{%
+  \par\medskip}
 \newcommand{\specialcell}[2][l]{%
   \begin{tabular}[#1]{@{}l@{}}#2\end{tabular}}
 \frenchspacing
@@ -215,8 +223,41 @@ When we incorporate these particular lingustic features, our cross-validation ac
 
 Which n-grams are most predictive of greater-than-average donation frequency? The top 15 most significant positive and negative predictive lingustic features along with their corresponding regression coefficients are displayed in Table \ref{tab:regression}.
 
-Are there any discernable patterns among these n-grams?
-\begin{figure*}[hb]
+Are there any discernable patterns among these n-grams? An examination of the most positive-predicting linguistic features reveals that the advertisement of academic affiliation is a strong predictor of recieving a higher-than-average number of altruistic donations. The usage of ``universitys'' and ``my senior,'' in particular illustrate this point.
+\begin{blockquote}
+The AcaBelles are Florida State \textbf{University's} premier all-female a cappella group\ldots\par\noindent
+This is \textbf{my senior} thesis film at Pacific Union College\ldots\par\noindent
+\end{blockquote}
+Based on this analysis, it's reasonable to state that the Kickstarter community is more likely to give to students without requesting any rewards in return.
+
+Furthermore, positive sentiment and language that indicates the author's excitement about the project (``so exciting,'' ``the challenge of,'' ``taken off'') appears to positively predict donation.
+\begin{blockquote}
+This is about to get \textbf{so exciting} for the IBP! \par\noindent
+We developed more recipes and got excited about \textbf{the challenge of} using whole foods\ldots\par\noindent
+Podcasting has really \textbf{taken off} in the past year\ldots
+\end{blockquote}
+
+There are also some interesting patterns in the negatively-predicting n-grams. For instance, self-describing language appears to be a consistently negative predictor of altruistic donation. Though the usage of any short sequence of words can vary considerably, common usage of linguistic features like ``people that are,'' ``we going,'' ``so we know,'' and ``my website at'' demonstrate this phenomenon.
+\begin{blockquote}
+We are all likable and professional \textbf{people that are} trying to build something\ldots\par\noindent
+How Are \textbf{We Going} to Pull This Off?\ldots\par\noindent
+We have 7 or so years of experience building art ... \textbf{so we know} that we can make this project happen.\ldots\par\noindent
+Please visit \textbf{my website at}\ldots
+\end{blockquote}
+Furthermore, it seems that lingustic features that make commands of backers (``get in on,'' ``must make'') are negative predictors of donations.
+\begin{blockquote}
+Participants \textbf{must make} their own travel/lodging arrangements\ldots\par\noindent
+We only have room for 4, so \textbf{get in on} this quickly\ldots
+\end{blockquote}
+
+Finally, the portrayal of backer interaction with rewards also appears to have a significant effect on donations. For instance, ``recipient of'' is a strong positive predictor, whereas ``can walk'' is a strong negative predictor.
+\begin{blockquote}
+Depending on how much money you pledge you \textbf{can walk} away with something as small as a print\ldots\par\noindent
+You will be the \textbf{recipient of} TWO different designs
+\end{blockquote}
+
+Overall, there are lots of interesting linguistic and psychological observations that can be made based on the most significant positive and negative language-based predictors. A full ordered list of n-grams along with associated regression coefficients is provided\footnote{PUT LINK HERE} if the reader is interested in performing their own analysis.
+\begin{figure*}[t]
 \centering
 \subfloat{
   \includegraphics[width=.3\textwidth]{figures/Musicevents.png}
@@ -225,7 +266,7 @@ Are there any discernable patterns among these n-grams?
   \includegraphics[width=.3\textwidth]{figures/FilmVideoevents.png}
 }
 \subfloat{
-  \includegraphics[width=.3\textwidth]{figures/Artevents.png}
+  \includegraphics[width=.3\textwidth]{figures/Gamesevents.png}
 }
 \hspace{0mm}
 \subfloat{
@@ -235,10 +276,10 @@ Are there any discernable patterns among these n-grams?
   \includegraphics[width=.3\textwidth]{figures/FilmVideovals.png}
 }
 \subfloat{
-  \includegraphics[width=.3\textwidth]{figures/Artvals.png}
+  \includegraphics[width=.3\textwidth]{figures/Gamesvals.png}
 }
-\caption{Top row: event-based altruism distribution. x-axis represents the proportion of all donation events where contributors selected ``no reward'' when compared to all donation events for a project. Bottom row: dollar value-based altruism distribution. x-axis represents the proportion of all money raised that was given above-and-beyond the required value of the claimed rewards, when compared to the total amount raised for a given project. For both rows, dotted lines indicate means for successful and unsuccessful projects. The three columns represent projects from the most popular categories, ``Music,'' ``Film and Video,'' and ``Art,'' though similar patterns often emerge in categories like ``Technology'' and ``Games.''}
-\label{fig:failsuccgraphs}
+\caption{Top row: event-based altruism distribution. x-axis represents the proportion of all donation events where contributors selected ``no reward'' when compared to all donation events for a project. Bottom row: dollar value-based altruism distribution. x-axis represents the proportion of all money raised that was given above-and-beyond the required value of the claimed rewards, when compared to the total amount raised for a given project. For both rows, dotted lines indicate means for successful and unsuccessful projects. The first two columns represent projects from the two most popular categories, ``Music'' and ``Film and Video,'' while the third ``Games,'' is included for topical contrast. All differences between the means in the graphs presented are significant at the 5\% level except for the ``Games'' and ``Music'' graphs in the second row.}
+\label{fig:failsucc}
 \end{figure*}
 \section{Failing Projects, More Donations?}
 What is the relationship between project success and the proportion of altruistic donations a project recieves? One might reasonably expect that successful projects, having higher quality pitches and commanding more donations on average, would also have a higher proportion of altruistic donations. In fact, the conclusions based on the analysis in this section find the \emph{opposite} to be true -- we find that, in fact, that there is a consistent negative association between project success and proportion of altruistic donations recieved.
@@ -254,9 +295,9 @@ To further investigate this result, we split all projects with more than ten bac
 \end{equation}
 for some project $p$.
 
-For the event donation frequencies, there is a clear pattern: in 12 of the 13 Kickstarter categories (the exception being ``Food'') failing projects recieve a higher proportion of altruistic donations, on average. In seven of the thirteen categories, this result is significant at the 5\% level. For categories with large numbers of projects, this result is often highly significant. For instance, in the two most popular Kickstarter categories, ``Music'' and ``Film and Video,'' we observe a that failed projects recieve, on average, significantly more altruistic donation events (Student's t-test, $p<<.001$ in both cases). Sample plots of the event distributions are presented in the first row of Figure FIG.
+For the event donation frequencies, there is a clear pattern: in 12 of the 13 Kickstarter categories (the exception being ``Food'') failing projects recieve a higher proportion of altruistic donations, on average. In seven of the thirteen categories, this result is significant at the 5\% level. For categories with large numbers of projects, this result is often highly significant. For instance, in the two most popular Kickstarter categories, ``Music'' and ``Film and Video,'' we observe a that failed projects recieve, on average, significantly more altruistic donation events (Student's t-test, $p<<.001$ in both cases). Sample plots of the event distributions are presented in the first row of Figure \ref{fig:failsucc}.
 
-When we change the focus of our analysis from events to dollar values, however, this pattern becomes less apparent, or reverses altogether. In the ``Film and Video'' category, for instance, we observe a total reversal, a significant result ($p << .001$) that states successful projects receive more dollars altruistically than failed projects. In the ``Music'' category, the test statistic is close to zero,  In fact, over all categories all statistically significant results ( state that successful projects. Sample plots of the dollar value distributions are presented in the second row of Figure FIG.
+When we change the focus of our analysis from events to dollar values, however, this pattern becomes less apparent, or reverses altogether. In the ``Film and Video'' category, for instance, we observe a total reversal, a significant result ($p << .001$) that states successful projects receive more dollars altruistically than failed projects. In the ``Music'' category, the test statistic is close to zero,  In fact, over all categories all statistically significant results ( state that successful projects. Sample plots of the dollar value distributions are presented in the second row of Figure \ref{fig:failsucc}.
 
 What does this discrepency between events and dollar value mean? We suspect that the many significant results for our event-based analysis indicate that, indeed, failing projects recieve, on average, more altruistic donation events. However, the value of these donations is likely small, as many of these results don't hold when actual dollar values are considered.
 
@@ -264,11 +305,15 @@ We believe that this result sugguests the following scenario is common across ma
 
 Our hypothesis regarding low-cost donations fits very well into the framework established by previous psychological studies, assuming that feelings of sympathy are the driving force behind donation to failing projects. The existance and popularity of website entitled KickEnded\footnote{\url{http://kickended.com/about}} lends crediability to this theory. On KickEnded, finished Kickstarter projects with zero backers are archived so that they may ``live a second life... free from the pressure of money raising.'' The notion that commercial success does not equate to societial value is a highly sympathetic one. Though this evidence is rather indirect, it is a fairly strong indicator of the dynamics underlying our data.
 
-Assuming our hypothesis is correct, several interesting questions arise. Who are these low-cost altruistic donators? Are their motiviations sympathetic, as the psychology literature and Kickended's popularity sugguest? Are there sub-communities of altruistic users? Are there community-derived benefits to making altruistic donations on Kickstarter? These specific questions would be best answered by Kickstarter users themselves; interesting future work might include questionaires sent out to a specifically targeted user base.
+Assuming our hypothesis is correct, several interesting questions arise. Who are these low-cost altruistic donators? Are their motiviations sympathetic, as the psychology literature and Kickended's popularity sugguest? Are there sub-communities of altruistic users? Are there community-derived benefits to making altruistic donations on Kickstarter? These specific questions would be best answered by Kickstarter users themselves; interesting future work might include questionaires sent out to a specifically targeted subset of users.
 
 \section{Conclusion}
 
 Here, we presented several analyses relating to altruistic behavior on crowdfunding sites with a focus on language.
+
+\section{Acknowledgements}
+
+We would like to thank Eric Gilbert and Tanushree Mitra for providing their HTML scrape of Kickstarter, and all members of the Fall 2014 iteration of Cornell's CS6742 for their helpful conversations.
 
 \bibliographystyle{aaai} \bibliography{refs}
 
