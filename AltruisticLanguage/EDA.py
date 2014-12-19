@@ -53,10 +53,6 @@ def getProjectsOfCategory(category, allProjects):
 
     return returnList
 
-def getCategories(projects):
-    return set([x.category for x in projects])
-
-
 def printGroupStatistics(projects):
     cats = getCategories(projects)
     
@@ -73,6 +69,9 @@ def printGroupStatistics(projects):
                                                       len(catProjects),
                                                       succRatio,
                                                       aveRaised)
+
+def getCategories(projects):
+    return set([x.category for x in projects])
 
 def getSeedPhrases():
     return ['gratitude', 'your name', 'counts', 'access', 'personal', 'mention', 'thank you']
@@ -464,25 +463,7 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
                   sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
 
     
-    #print "Using {} n-grams".format(len(validGrams))
-    #with open('kickstarterSW.ngrams','w') as f:
-    #    words = ""
-    #    for v in validGrams:
-    #        words += v + "\n"
-    #    f.write(words[:-1])
-
-
-    #validGrams = [v for v in validGrams if not
-    #              set.issubset(set(v.split()), set(stopwords.words('english')))]
-
-    #print "Using {} n-grams".format(len(validGrams))
-    #with open('kickstarter.ngrams','w') as f:
-    #    words = ""
-    #    for v in validGrams:
-    #        words += v + "\n"
-    #    f.write(words[:-1])
-
-    #quit()
+    print "Using {} n-grams".format(len(validGrams))
 
     returnMatrix = np.zeros([len(projects),len(validGrams)], dtype = np.float32)
     for i in range(len(projects)):

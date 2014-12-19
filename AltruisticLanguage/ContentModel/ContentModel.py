@@ -19,7 +19,7 @@ class ContentModel:
                  numClusters = 1275,
                  minProportion = .007,
                  clusterTrainProp = 1, 
-                 d1 = .00001,
+                 d1 = .00000005,
                  d2 = .001,
                  cleanSents = None,
                  saveFile = None):

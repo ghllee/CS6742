@@ -1,13 +1,11 @@
 import sys
 
-def main():
-    '''Command line argument should be [input file] [prior] [output file]'''
-    with open(sys.argv[-1], 'w') as out:
-        with open(sys.argv[1]) as fileIn:
-            writeStr = ""
-            for line in fileIn:
-                writeStr += line.strip() + ":" + sys.argv[2] + "\n"
-            out.write(writeStr[:-1])
+myFile = open(sys.argv[1])
+outFile = open(sys.argv[2], 'w')
+prior = .01
 
-if __name__ == "__main__":
-    main()
+for line in myFile:
+    outFile.write(line.strip() + ":" + str(prior) + "\n")
+
+myFile.close()
+outFile.close()

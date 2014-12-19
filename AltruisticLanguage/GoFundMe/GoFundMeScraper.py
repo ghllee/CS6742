@@ -56,7 +56,5 @@ def main():
             with open(curDir + str(i) + '.html', 'w') as f:
                 f.write(htmlText)
             
-            
-
 if __name__ == "__main__":
     main()

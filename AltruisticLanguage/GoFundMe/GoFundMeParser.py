@@ -11,6 +11,7 @@ import string
 from collections import Counter, defaultdict
 from nltk.corpus import stopwords
 import numpy as np
+import operator
 
 class GFMProject:
     def __init__(self):
@@ -108,10 +109,11 @@ def loadProjects(pickleDir):
 
 def extractTextFeatures(projects, minOccur = 10, nGram = 3):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category.'''
-    #dict mapping from category -> set of n grams in that category
-    catGramDict = defaultdict(set)
-    #counter mapping from n-gram -> count
+
+    gramCatCounter = defaultdict(lambda: Counter())
     nGramCounter = Counter()
+    catCounter = Counter()
+    catGramDict = defaultdict(set)
 
     myGramFun = lambda x,y: getNGrams(x, y, toLower = True, removePunct = True)
 
@@ -121,15 +123,42 @@ def extractTextFeatures(projects, minOccur = 10, nGram = 3):
             nGrams = myGramFun(p.text, n)
             for g in nGrams:
                 nGramCounter[g] += 1
+                gramCatCounter[p.category][g] += 1
             catGramDict[p.category].update(set(nGrams))
+            catCounter[p.category] += 1
 
-    validGrams = [x for x in proportionalIntersection(catGramDict.values(), proportion=.50)
+    validGrams = [x for x in proportionalIntersection(catGramDict.values(), proportion=1)
                   if nGramCounter[x] > minOccur]
     print len(validGrams)
+    print catCounter
+
+    gramToVar = {}
+    i = 1
+    print "Filtering..."
+    for v in validGrams:
+        if i % 1000 == 0: print i
+        perDocList = []
+        for cat, catCount in catCounter.iteritems():
+            perDocList.append((gramCatCounter[cat][v]*.1)/catCount)
+        gramToVar[v] = 1.0*(np.max(perDocList)-np.min(perDocList))/np.max(perDocList)
+
+    validGrams = [x[0] for x in
+                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
+    
+    with open('gfm90SW.ngrams','w') as f:
+        words = ""
+        for v in validGrams:
+            words += v + "\n"
+        f.write(words[:-1])
+
     validGrams = [v for v in validGrams if not
                   set.issubset(set(v.split()), set(stopwords.words('english')))]
-    print len(validGrams)
-    return validGrams
+
+    with open('gfm90.ngrams','w') as f:
+        words = ""
+        for v in validGrams:
+            words += v + "\n"
+        f.write(words[:-1])
 
 def proportionalIntersection(setList, proportion = .5):
     '''Given a list of sets, return the set of items that exist in a least floor(proportion*numSets)'''
@@ -163,21 +192,24 @@ def getNGrams(stringIn, n, toLower = True, removePunct = False):
 
 def main():
     projects = set(loadProjects("output"))
-    catDict = defaultdict(list)
-    for p in projects: catDict[p.category].append(p)
+    projects = [x for x in projects if "News" not in x.category and "Other" not in x.category]
+    print projects[0].category
+    #catDict = defaultdict(list)
+    #for p in projects: catDict[p.category].append(p)
     
-    for k,v in catDict.iteritems():
-        with open("projectTexts/" + k + ".pickle", 'w+') as f:
-            pickle.dump([x.text for x in v], f, -1)
+    #for k,v in catDict.iteritems():
+    #    with open("projectTexts/" + k + ".pickle", 'w+') as f:
+    #        pickle.dump([x.text for x in v], f, -1)
 
     myTexts = [p.text for p in projects]
     with open('GFMText.pickle','w') as f:
         pickle.dump(myTexts, f, -1)
     quit()
-    nGrams = extractTextFeatures(projects)
+    
+    #extractTextFeatures(projects)
 
-    with open('gofundme50.ngrams','w') as f:
-        for n in nGrams: f.write(n + "\n")
+    #with open('gofundme50.ngrams','w') as f:
+    #    for n in nGrams: f.write(n + "\n")
     #for p in projects: counter[p.name] += 1
     #for k,v in counter.iteritems():
     #    if v >= 2: print k

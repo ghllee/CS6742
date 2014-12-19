@@ -17,19 +17,22 @@ def interpretClusters(clusterFileName):
             else:
                 clusterMap[curCluster].append(line.strip())
 
-    for cluster, sents in clusterMap.iteritems():
-        print cluster, len(sents)
+    #for cluster, sents in clusterMap.iteritems():
+    #    print cluster, len(sents)
     
     for cluster, sents in clusterMap.iteritems():
+        if cluster == -1: continue
         counts = Counter()
         for s in sents:
-            counts.update(set(getNGrams(s,n=3)))
+            counts.update(set(getNGrams(s,n=4)))
         topTen = sorted(counts.iteritems(), key=operator.itemgetter(1))[::-1][:20]
-        print cluster
-        for s in sents:
-            if 'in the hospital' in s:
-                pass#print s
-        print topTen
+        #print cluster
+        string = str(len(sents)) + ' & \specialcell{'
+        for i in range(5):
+            string += '`' + topTen[i][0].replace('numnumnumnum', '\#') + '\'\\\\'
+        string = string[:-2]
+        string += '}\\\\\\hline'
+        print string
 
 def interpretPaths(pathsFile):
     docSents = defaultdict(list)
@@ -118,23 +121,6 @@ def interpretPaths(pathsFile):
         #    plt.plot([heightMap[s] for s in seq])
         #plt.savefig(str(length) + ".png")
         #plt.figure()
-
-
-def getClusterNamesOrdering():
-    returnDict = {}
-    returnDict[636] = ('Personal Description',1)
-    returnDict[1222] = ('You Can Help',7)
-    returnDict[588] = ('Thank You',11)
-    returnDict[76] = ('Lack of Ability',5)
-    returnDict[158] = ('Use of Money',9)
-    returnDict[633] = ('Introduction', 0)
-    returnDict[314] = ('Diagnosis', 4)
-    returnDict[156] = ('Request', 8)
-    returnDict[154] = ('Appreciation',9)
-    returnDict[309] = ('Personal Story',2)
-    returnDict[78] = ('Hospital/Emergency Room',3)
-    returnDict[-1] = ('ETC',6)
-    return returnDict
     
 def getNGrams(stringIn, n=2):
     tokens = stringIn.split()
@@ -142,10 +128,9 @@ def getNGrams(stringIn, n=2):
     for i in range(len(tokens)-n+1): returnList.append(' '.join(tokens[i:i+n]))
     return returnList
 
-
 def main():
-    interpretClusters("clustersOut.txt")
-#    interpretPaths("docPathsOut.txt")
+#    interpretClusters("clustersOut.txt")
+    interpretPaths("docPathsOut.txt")
 
 if __name__ == "__main__":
     main()

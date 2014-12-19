@@ -1,38 +1,59 @@
-from scipy.stats import spearmanr as spr
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.stats as sp
+from collections import Counter, defaultdict
 
-file1 = "GFMvKSSW.result"
-file2 = "KSvAMASW.result"
-
-ngramToID = {}
+file1 = "newNGrams/GFMvsKSSW.result"
+file2 = "newNGrams/AMAvsKSSW.result"
 
 rank1 = []
 rank2 = []
 
+ngrams = []
+
+skip = 4
+
+nGramCounter = Counter()
+ngramToVal = {}
+ngrams = []
+orderedNGram = defaultdict(list)
 with open(file1) as f:
-    curId = 0
     for line in f:
         if len(line) == 0: continue
         tokens = line.split()
         nGram = ' '.join(tokens[:-1])
-        if len(tokens) != 4: continue
-        ngramToID[nGram] = curId
-        rank1.append(curId)
-        curId += 1
+        if skip is not None:
+            if len(tokens) == skip: continue
+        orderedNGram[len(tokens)].append((nGram, float(tokens[-1])))
+        ngramToVal[nGram] = float(tokens[-1])
+        ngrams.append(nGram)
 
-idToNgram = {i:n for n,i in ngramToID.iteritems()}
-
+orderedNGram = defaultdict(list)
+ngramToVal2 = {}
 with open(file2) as f:
     for line in f:
         if len(line) == 0: continue
         tokens = line.split()
-        if len(tokens) != 4: continue
         nGram = ' '.join(tokens[:-1])
-        rank2.append(ngramToID[nGram])
+        if skip is not None:
+            if len(tokens) == skip: continue
+        orderedNGram[len(tokens)].append((nGram, float(tokens[-1])))
+        ngramToVal2[nGram] = float(tokens[-1])
 
-print [idToNgram[x] for x in rank1[:10]]
-print [idToNgram[x] for x in rank2[:10]]
+print len(ngrams)
 
-print len(rank1)
-print len(rank2)
-print spr(rank1, rank2)
+#for i in [2,3,4]:
+#    print i
+#    for x in orderedNGram[i][:5]:
+#        print x
+#    print
+#    for x in orderedNGram[i][-5:]:
+#        print x
+
+
+
+rank1 = [ngramToVal[n] for n in ngrams]
+rank2 = [ngramToVal2[n] for n in ngrams]
+
+tau, p_value = sp.stats.kendalltau(rank1, rank2)
+print tau, p_value
