@@ -32,6 +32,7 @@ def categoryValueTest(projects):
         plt.legend(loc='upper right', fontsize=18)
         plt.title(cat, fontsize=18)
         plt.xlabel("Proportion Altruistic", fontsize=18)
+        plt.axes().get_yaxis().set_visible(False)
         plt.savefig("catGraphs/" + cat + "events.png")
         plt.close()
 
@@ -46,6 +47,7 @@ def categoryValueTest(projects):
         plt.legend(loc='upper right', fontsize=18)
         plt.title(cat, fontsize=18)
         plt.xlabel("Proportion Altruistic", fontsize=18)
+        plt.axes().get_yaxis().set_visible(False)
         plt.savefig("catGraphs/" + cat + "vals.png")
         plt.close()
         plt.figure()

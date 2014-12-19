@@ -642,6 +642,12 @@ def compareMineToTheirs(projects):
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
+    minDate = min([p.startDate for p in projects])
+    maxDate = max([p.endDate for p in projects])
+    
+    print minDate
+    print maxDate
+
     #categoryAltruisticPropTest(projects)
     #basicStats(projects)
     #texts = [p.text for p in projects]
@@ -652,7 +658,7 @@ def main():
     #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
     #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
     #                            counts=False)
-    saveFeatureMatrixAndHeaders(projects, "all90Filter.mtx", "allHeaders90Filter.csv", control=False)
+    #saveFeatureMatrixAndHeaders(projects, "all90Filter.mtx", "allHeaders90Filter.csv", control=False)
 
     #target = np.zeros([len(projects), 1], dtype=np.int)
     

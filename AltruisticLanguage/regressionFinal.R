@@ -86,9 +86,19 @@ topBottomK <- function(cvReg, k) {
   print("TOP")
   print(apply(myCoefMatrix, 2, rsort)[1:k,])
 }
+
+orderedCoefs <- function(cvReg) {
+  bestlambda<-cvReg$lambda.min
+  mse.min <- cvReg$cvm[cvReg$lambda == bestlambda]
+  print(1-mse.min)
+  myCoefs <- coef(cvReg, s=bestlambda)
+  myCoefMatrix <- as.matrix(myCoefs)
+  return(apply(myCoefMatrix, 2, sort))
+}
+
 topK <- 50
 topBottomK(control, topK)
 topBottomK(noSW, topK)
 topBottomK(SW, topK)
 topBottomK(test2, topK)
-# 
+write.table(orderedCoefs(SW), file = "testFile.csv")

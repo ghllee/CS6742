@@ -28,7 +28,7 @@ def interpretClusters(clusterFileName):
         topTen = sorted(counts.iteritems(), key=operator.itemgetter(1))[::-1][:20]
         #print cluster
         string = str(len(sents)) + ' & \specialcell{'
-        for i in range(5):
+        for i in range(3):
             string += '`' + topTen[i][0].replace('numnumnumnum', '\#') + '\'\\\\'
         string = string[:-2]
         string += '}\\\\\\hline'
@@ -44,6 +44,7 @@ def interpretPaths(pathsFile):
             tokens[-1] = tokens[-1][:-1]
             for t in tokens:
                 tokens2 = t.split(',')
+                #if int(tokens2[1]) == -1: continue
                 docSents[curDoc].append((tokens2[0][1:-1], int(tokens2[1])))
             curDoc += 1
     lengths = Counter()
@@ -56,9 +57,11 @@ def interpretPaths(pathsFile):
     seqDict = defaultdict(list)
     clusterPosDict = defaultdict(list)
     for doc, sents in docSents.iteritems():
+        #seqDict[len([s for s in sents if s[1] != -1])].append([s[1] for s in sents if s[1] != -1])
         seqDict[len(sents)].append([s[1] for s in sents])
         for i in range(len(sents)):
-            clusterPosDict[s[1]].append(1.*i/len(sents))
+            s = sents[i]
+            clusterPosDict[s[1]].append((1.*i)/len(sents))
             clusterCounts[s[1]] += 1
     stateSet = set()
     for length, sequences in seqDict.iteritems():
@@ -66,29 +69,26 @@ def interpretPaths(pathsFile):
     
     clusterAveragePosDict = {}
     for cluster, posList in clusterPosDict.iteritems():
-        clusterAveragePosDict[cluster] = sum(posList)/len(posList)
-
+        if cluster in [314, 588]:
+            plt.hist(posList, color = 'g' if cluster == 314 else 'b', alpha=.5,
+                     label = "Introduction" if cluster == 314 else "Thank you", normed = True)
+        else: plt.hist(posList, color = 'k', alpha = .1, normed = True)
+        clusterAveragePosDict[cluster] = (1.0*sum(posList))/len(posList)
+    plt.xlabel("Average Position in Document", fontsize=18)
+    plt.legend(loc='upper center')
+    plt.savefig("final.png")
+    plt.close()
+    plt.figure()
+    quit()
     ordering = [x[0] for x in
                 sorted(clusterAveragePosDict.iteritems(), key = operator.itemgetter(1))]
 
-    ordering.remove(-1)
-    #heightMap = {ordering[i]:i for i in range(len(ordering))}
-    #heightMap[-1] = -1
-
-    #assign a height for each state
-    #heightMap = defaultdict(int)
-    #curHeight = 0
-    #for s in stateSet:
-    #    print s
-    #    if s == -1:
-    #        heightMap[s] = -1
-    #    else:
-    #        heightMap[s] = curHeight
-    #        curHeight += 1
-
-    namesAndOrder = getClusterNamesOrdering()
-    heightMap = {cluster:val[1] for cluster,val in namesAndOrder.iteritems()}
-    
+    print "ORDERING"
+    print ordering
+    heightMap = {ordering[i]:i for i in range(len(ordering))}
+    heightMap[-1] = -1
+    print heightMap
+    print clusterCounts
     def maxPropDiffFromBackground(lst, clusterCounts): 
         sampleCounts = Counter(lst)
         
@@ -114,13 +114,13 @@ def interpretPaths(pathsFile):
             for s in seqs:
                 statesAtStep[i].append(s[i])
         
-        print [namesAndOrder[maxPropDiffFromBackground(statesAtStep[i], clusterCounts)][0]
+        print [maxPropDiffFromBackground(statesAtStep[i], clusterCounts)
                for i in range(length)]
 
-        #for seq in seqs:
-        #    plt.plot([heightMap[s] for s in seq])
-        #plt.savefig(str(length) + ".png")
-        #plt.figure()
+        for seq in seqs:
+            plt.plot([heightMap[s] for s in seq])
+        plt.savefig(str(length) + ".png")
+        plt.figure()
     
 def getNGrams(stringIn, n=2):
     tokens = stringIn.split()
@@ -129,8 +129,8 @@ def getNGrams(stringIn, n=2):
     return returnList
 
 def main():
-#    interpretClusters("clustersOut.txt")
-    interpretPaths("docPathsOut.txt")
+    interpretClusters("clustersOut.txt")
+#    interpretPaths("docPathsOut.txt")
 
 if __name__ == "__main__":
     main()
