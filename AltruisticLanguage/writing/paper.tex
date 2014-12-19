@@ -15,8 +15,8 @@
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newenvironment{blockquote}{%
-  \par%
   \setlength{\parskip}{.5em}
+  \par%
   \small
   \medskip
   \leftskip=3em\rightskip=3em%
@@ -41,7 +41,7 @@
 \maketitle
 \begin{abstract}
 \begin{quote}
-Abstract
+In this study we conduct several experiments related to altruistic behavior on Kickstarter and other crowdfunding sites. This realm has been relatively unexplored in previous work, which is surprising given that roughly 20\% of all backing money on Kickstarter is donated. Because previous work sugguests that lingustic features are very important to requests made online, language is a focal point of our analysis. We first find that Kickstarter exists in a lingustic realm somewhere between pure altruism and pure commericalism. Next, we find that useful information about the sequential nature of requests can be learned in an unsupervized fashion. Also, we find that linguistic features on Kickstarter are able to predict whether or not projects recieve above-average levels of prosocial activity. Finally, and most surprisingly, we find that failing projects are acutally more likely to recieve altruistic donations, sugguesting the existance of a subset of users who frequently give small amounts of money to failing projects and request no rewards in return.
 \end{quote}
 \end{abstract}
 
@@ -49,9 +49,7 @@ Abstract
 
 In recent years, crowdfunding websites have emerged as a popular method of fundraising for individuals looking to promote their ventures to online communities. The most popular of these sites, Kickstarter, provides a venue for entrepreneurs to connect with individuals who might be interested in financially supporting their project ideas, which range from artistic endevours to technology startups. To date, over \$1.4B has been invested in Kickstarter projects from more than 7.4M unique backers resulting in over 73K successfully funded projects. \footnote{ \url{www.kickstarter.com/help/stats}} Each project is associated with a set of creator-defined rewards that donors can choose from. Often, these rewards constitute pre-orders of a product that the project aims to bring to market.
 
-(PARAGRAPH ABOUT ACADEMIC INTEREST WITH CITATIONS)
-
-We argue that crowdfunding sites similar to Kickstarter occupy a unique space between a realm of pure salespersonship and a realm of pure altruism. A project that illustrates that Kickstarter is not purely altruistic nor purely commerical is ``Juicies.''\footnote{\url{http://tinyurl.com/juiciesproject}} In this project, the creators successfully attempted to create a company that sells multi-colored charging cables for various mobile devices, and offered cable preorders as rewards. The basic cable was associated with two rewards, one costing the suggested retail price of \$20, and the other charging users to ``pay what you can'' for the same cable costing \$1. While over 1K pay-what-you-can rewards were claimed, the \$20 reward was claimed 280 times. Users voluntarily paying more for an identical product sugguests that Kickstarter is not a community solely focused on commercialism.
+We argue that crowdfunding sites similar to Kickstarter occupy a unique space between a realm of pure salespersonship and a realm of pure altruism. A project that illustrates that Kickstarter is not purely altruistic nor purely commerical is ``Juicies.''\footnote{\url{http://tinyurl.com/juiciesproject}} In this project, the creators successfully attempted to create a company that sells multi-colored charging cables for various mobile devices, and offered cable preorders as rewards. The basic cable was associated with two rewards, one costing the suggested retail price of \$20, and the other charging users to ``pay what you can'' for the same cable costing \$1. While over 1K pay-what-you-can rewards were claimed, the \$20 reward was claimed 280 times. Users voluntarily paying more for an identical product sugguests that Kickstarter is not a community solely focused on commercialism. This observation matches previous work which sugguests that people use crowdfunding tools for reasons other than personal gain \cite{van2011fighting}.
 
 \begin{table*}[t]
 \centering
@@ -88,16 +86,15 @@ easy & 82.72 & out of & 71.67 & one of the & 30.97 \\\hline
 \label{tab:pairwise}
 \end{table*}
 
-Furthermore, in our dataset consisting of 45K completed Kickstarter projects, we are able to quantify the number of purely altruistic donation events and the total value given above and beyond the amount required for all reward claims. Of the roughly 3.4M donation events, about 360K (10.59\%) resulted from users who selected no reward. Of the roughly \$246M pledged in our dataset, over \$53M (21.59\%) was given altruistically. Compared to previous analyses of altruism in online communities THIS IS A LOT OF MONEY.
+Furthermore, in our dataset consisting of 45K completed Kickstarter projects, we are able to quantify the number of purely altruistic donation events and the total value given above and beyond the amount required for all reward claims. Of the roughly 3.4M donation events, about 360K (10.59\%) resulted from users who selected no reward. Of the roughly \$246M pledged in our dataset, over \$53M (21.59\%) was given altruistically.
 
-The community and language of Kickstarter have been studied previously. Mitra and Gilbert analyze the language that predicts successful Kickstarter projects \cite{mitra2014language}. When compared their baseline regression trained on language-indepedent project features, their final classifier, which includes n-gram counts, is able to classify projects 15\% more accurately, resulting in a 97.8\% correct prediction rate in a 10-fold cross validation setting. Similar analyses that do not take language fully into account are not able to achieve such predictive accuracy. Studies that use of minimal textual information in conjunction with baseline project features are able to learn classifiers that reach 68\% accuracy using information available at launch time \cite{greenberg2013crowdfunding}. Even using post-launch information, however, does not improve accuracy as much as accounting for language; 85\% accuracy is achieved using information available after 15\% of the duration of the campaign has expired \cite{etter2013launch}. These findings sugguest that language is very important on Kickstarter, which is a primary motivation for making it a focus of our analysis.
+The community and language of Kickstarter have been studied previously. Mitra and Gilbert analyze the language that predicts successful Kickstarter projects \cite{mitra2014language}. When compared their baseline regression trained on language-indepedent project features, their final classifier, which includes n-gram counts, is able to classify projects 15\% more accurately, resulting in a 97.8\% correct prediction rate in a 10-fold cross validation setting. Similar analyses that do not take language fully into account are not able to achieve such predictive accuracy. Studies that use of minimal textual information in conjunction with baseline project features are able to learn classifiers that reach 68\% accuracy using information available at launch time \cite{greenberg2013crowdfunding}. Even using post-launch information, however, does not improve accuracy as much as accounting for language; 85\% accuracy is achieved using information available after 15\% of the duration of the campaign has expired \cite{etter2013launch}. Furthermore, lingustic factors have been shown to effect the quality and time-to-response of questions posed in an online community \cite{teevan2011factors}. These findings sugguest that language is very important on Kickstarter, which is a primary motivation for making it a focus of our analysis.
 
-Altruism in online communities has also been studied as well. Althoff et al. examine a purely altruistic community wherein users request free pizza from other members \cite{althoff2014ask}. An advantage of their dataset is that all altruistic requests are made for the same service. MORE MORE MORE
+Altruism in online communities has also been studied as well. Althoff et al. examine a purely altruistic community wherein users request free pizza from other members \cite{althoff2014ask}. An advantage of their dataset is that all altruistic requests are made for the same service. Previous work on Kickstarter has also demonstrated that users are more likely to donate to campigns as time is winding down and the project has not yet met its goal, which is an arguably altruistic behavior \cite{kuppuswamy2013crowdfunding}.
 
 These observations and previous work motivate our research questions: how does the language used on Kickstarter differ from the language used in a purely commercial setting? Or a purely altruistic setting? What types of Kickstarter projects are donated to altruistically? Does the language of a project description predict the donation behavior of backers?
 
 \section{Primary Dataset}
-
 Our dataset consists of 45810 completed Kickstarter projects, the URLs of which were originally collected by AppsBlogger.com. The projects in our data were all active sometime between April 2009, the earliest start date, and August 2012, the latest end date. Every Kickstarter project has an associated HTML page, which we parse using the popular HTML parsing library Beautiful Soup 4\footnote{\url{http://www.crummy.com/software/BeautifulSoup/}}. Each project's page contains information about the project such as its title, its description, the rewards (with associated cost, number of backers who have claimed that reward, and a description), the FAQ section, the total number of backers, and the total amount of money raised. This information served as the basis of our analysis.
 
 Kickstarter projects are also associated with a single category. The category of a Kickstarter project is used by the site to index projects and to help users find projects of a specific type. While some of these categories (13) are ``main'' categories, most are ``subcategories'' that have a corresponding main category. In most cases, we treat all categories as equivalent, irrespective of whether or not it is a sub or a main.
@@ -161,7 +158,7 @@ Number of Sentences & Top 3 4-grams \\\hline
 \label{fig:docpos}
 \end{figure}
 
-To analyze the sequential structure of requests, we run a case study on a subset of data utilizing a content model \cite{barzilay2004catching} to produce a sentence clustering. A content model is an unsupervized learning algorithm that operates on the sentence level, takes information order into account, and learns transition probabilities between sentence types. Here we provide a brief overview of the content model algorithm; for a fuller description, consult the original paper.
+To analyze the sequential structure of requests in a crowdfunding setting, we run a case study on a subset of data utilizing a content model \cite{barzilay2004catching} to produce a sentence clustering. A content model is an unsupervized learning algorithm that operates on the sentence level, takes information order into account, and learns transition probabilities between sentence types. Here we provide a brief overview of the content model algorithm; for a fuller description, consult the original paper.
 
 The goal of a content model is to learn a set of sentence clusters utilizing ordering information. Given a set of $N$ documents where document $n$ has $s_n$ sentences, sentences are first clustered into $k$ groups according to bigram features using complete-link clustering with a cosine distance metric. After sentences are clustered into these groups, we merge all clusters smaller than some threshold into an ``etcetera'' cluster. This etcetera cluster is a unique feature of the content model that allows it the flexibility to sort sentences that otherwise don't fit into an ``other'' cluster. After this merging process, we are left with $m$ clusters. 
 
@@ -174,11 +171,17 @@ In accordance with the reccomendations of the original authors, we attempt to ma
 
 We apply the content model to a small subset of the GoFundMe corpus (460 documents with a total of 7K sentences) corresponding to the campaigns listed in the ``Medical'' category. We utilize 11 content clusters and 1 etcetera cluster in our model. Though the original literature sugguests a larger number of clusters (30+) we opt for a smaller, interpretable analysis because our resulting model was not used for any information ordering or information extraction tasks, as in \cite{barzilay2004catching}. After our expectation maximization converged after nine iterations, we were left with the order-aware sentence clusters displayed in Table \ref{tab:contentmodel} (etcetera cluster omitted).
 
-. For the remaineder of this analysis, we are going to focus on the cluster containing 254 sentences (dubbed the ``Thank you'' cluster) and the cluster containing 272 sentences (dubbed the ``Introduction'' cluster).
+Clearly, there are clusters of all sorts that represent different pieces of a plea for help with medical expenses. One interesting cluster is the ``Ability'' cluster, which contains 356 sentences. Describing in detail a lack of ability is likely to elicit empathetic feelings from a reader, and, according to the well-supported empathy-altruism hypothesis, empathetic feelings are very likely to lead one to purely altruistic behavior, such as donating on a crowdfunding site \cite{batson1988five}.
 
 Content models carry with them the advantage that sentences with disjoint bigram features may be clustered together based on the order of sentences. For instance, ``your contributions big or small are greatly appreciated,'' ``as a family we thank you,'' and ``god bless you have a wonderful day'' are clustered together in the ``Thank you'' cluster. Despite the three sentences having disjoint bigram features and being entirely dissimilar according to the basic intialization scheme, the content model is able to discern that the three likely have similar meaning based on their placement in documents relative to other sentences.
 
-There are many interesting things that can be learned from the transition probabilities output by the content model, the most interpretable of which is illustrated in Figure \ref{fig:docpos}. This figure illustrates the distribution of normalized sentence position in . While this result is somewhat unsurprising (situations are introduced before authors thank readers) it demonstrates that the content model is able to learn useful information about ordering in an unsupervised fashion.
+For the remaineder of this analysis, we are going to focus on the cluster containing 254 sentences (dubbed the ``Thank you'' cluster) and the cluster containing 272 sentences (dubbed the ``Introduction'' cluster). Though there are many interesting things that can be learned from the transition probabilities output by the content model, the most interpretable fact is illustrated in Figure \ref{fig:docpos}. This figure shows the distribution of normalized sentence position of each cluster in the sentences in the dataset. For a given cluster $c$, this statistic is defined as
+
+\begin{equation} \label{eq:sentpos}
+\sum\limits_{k \in \text{Occurances of $c$}} \frac{\text{Position of $k$ in containing sentence}}{\text{Length of sentence containing $k$}}
+\end{equation}
+
+While this result is somewhat unsurprising (situations are introduced before authors thank readers) it demonstrates that the content model is able to learn useful information about ordering in an unsupervised fashion, and that aspects of the sequential nature of altruistic requests are learnable by this method.
 
 \section{Prediction of Altruism on Kickstarter}
 \begin{table}
@@ -251,14 +254,12 @@ The AcaBelles are Florida State \textbf{University's} premier all-female a cappe
 This is \textbf{my senior} thesis film at Pacific Union College\ldots\par\noindent
 \end{blockquote}
 Based on this analysis, it's reasonable to state that the Kickstarter community is more likely to give to students without requesting any rewards in return.
-
 Furthermore, positive sentiment and language that indicates the author's excitement about the project (``so exciting,'' ``the challenge of,'' ``taken off'') appears to positively predict donation.
 \begin{blockquote}
 This is about to get \textbf{so exciting} for the IBP! \par\noindent
 We developed more recipes and got excited about \textbf{the challenge of} using whole foods\ldots\par\noindent
 Podcasting has really \textbf{taken off} in the past year\ldots
 \end{blockquote}
-
 There are also some interesting patterns in the negatively-predicting n-grams. For instance, self-describing language appears to be a consistently negative predictor of altruistic donation. Though the usage of any short sequence of words can vary considerably, common usage of linguistic features like ``people that are,'' ``we going,'' ``so we know,'' and ``my website at'' demonstrate this phenomenon.
 \begin{blockquote}
 We are all likable and professional \textbf{people that are} trying to build something\ldots\par\noindent
@@ -271,7 +272,6 @@ Furthermore, it seems that lingustic features that make commands of backers (``g
 Participants \textbf{must make} their own travel/lodging arrangements\ldots\par\noindent
 We only have room for 4, so \textbf{get in on} this quickly\ldots
 \end{blockquote}
-
 Finally, the portrayal of backer interaction with rewards also appears to have a significant effect on donations. For instance, ``recipient of'' is a strong positive predictor, whereas ``can walk'' is a strong negative predictor.
 \begin{blockquote}
 Depending on how much money you pledge you \textbf{can walk} away with something as small as a print\ldots\par\noindent
@@ -331,7 +331,11 @@ Assuming our hypothesis is correct, several interesting questions arise. Who are
 
 \section{Conclusion}
 
-Here, we presented several analyses relating to altruistic behavior on crowdfunding sites with a focus on language.
+Here, we presented several analyses relating to altruistic behavior on crowdfunding sites with a focus on language. Our first analysis positioned Kickstarter between purely altruistic and purely commercial linguistic regimes. Next, as we examined the sequential structure of purely altruistic requests on GoFundMe and found that a content model was capable of learning an interpretable set of content-aware clusters that illustrate some of the stratigies authors use to ellicit donations. Then, noting that both event-based and amount-based altruistic activities can be determined based on the information presented on a Kickstarter page, we were able to extract the important linguistic features responsible for prediction of above-average donation levels. Finally, we made the surprising observation that failing projects tend to recieve more donation events, even after accounting for a wide range of control variables. This increased donation does not carry over to our amount-based analysis, however, sugguesting that failing projects recieve a large number of low-valued donations.
+
+Overall, much more work could be done to analyze the dynamics of altruistic behavior on crowdfunding sites, and in ``mixed-altruism'' domains in general. As previously sugguested, one possible avenue for future research would be to identify a subset of Kickstarter users that are likely to be responsible for frequent, low-valued donations given to failing projects. Another interesting avenue for exploration might be to identify and find similarities between other communities like Kickstarter.
+
+Finally, our study has several limitations that could be overcome in future work. Many Kickstarter projects have very low valued ``dummy'' rewards that are functionally equivalent to altruistic donation (for instance, such a reward might cost 1\$ and have the description ``Thanks!''). Its likely such rewards obscured some signal in our dataset. Furthermore, there are ``pie-in-the-sky'' type rewards that constitute altruism, as well (for instance, such a reward might cost 10,000\$ and have the description ``Thank you! You will get a producer credit in our movie and our eternal gratitude''). In any case, a more careful consideration of rewards would be a well-suited topic for future work.
 
 \section{Acknowledgements}
 
