@@ -8,6 +8,9 @@
 \usepackage{url}
 \usepackage{array}
 \usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{subfig}
 \newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
@@ -25,7 +28,7 @@
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
-\title{Pre-orders or Philanthropy: An Analysis of Altruism on Kickstarter}
+\title{Pre-orders or Philanthropy: An Analysis of Altruism on Kickstarter and Other Crowdfunding Sites}
 \author{Jack Hessel}
 \maketitle
 \begin{abstract}
@@ -85,12 +88,12 @@ Altruism in online communities has also been studied as well. Althoff et al. exa
 
 These observations and previous work motivate our research questions: how does the language used on Kickstarter differ from the language used in a purely commercial setting? Or a purely altruistic setting? What types of Kickstarter projects are donated to altruistically? Does the language of a project description predict the donation behavior of backers?
 
-\section{Previous Work}
+\section{Primary Dataset}
 
 \section{Kickstarter vs. GoFundMe and Amazon}
 What language used on Kickstarter is altruistic? What language used on Kickstarter is commercial? To address these questions, it might be possible to derive stringent definitions of altruism and salespersonship. However, for our analysis, we resort to a more objective analysis by incorporating two additional data sets, one from Amazon and one from GoFundMe.
 
-Amazon is a very popular online marketplace, where users can purchase items from a wide range of categories. Each product is associated with a description and and a set of categories. Our dataset consists of just over 1M Amazon product descriptions \cite{mcauley2013hidden}. We believe that Amazon product descriptions can be considered as purely commercial. On the other hand, GoFundMe is a crowdfunding site similar to Kickstarter, but campaigns are generally more focused on charitable/personal ventures. For instance, a popular category on GoFundMe is ``Medical,'' wherein users create pages to raise money for medical expenses for family and friends. Our dataset consists of 7.7K GoFundMe project descriptions. In contrast to Kickstarter, in a vast majority of cases GoFundMe contributors don't have the option to select compensentory rewards, and we therefore regard our GoFundMe data as requests for purely altruistic actions.
+Amazon is a very popular online marketplace, where users can purchase items from a wide range of categories. Each product is associated with a description and and a set of categories. Our dataset consists of just over 1M Amazon product descriptions \cite{mcauley2013hidden}. We believe that Amazon product descriptions can be considered as purely commercial. On the other hand, GoFundMe is a crowdfunding site similar to Kickstarter, but campaigns are generally more focused on charitable/personal ventures. For instance, a popular category on GoFundMe is ``Medical,'' wherein users create pages to raise money for medical expenses for family and friends. Our dataset consists of 7.7K GoFundMe project descriptions. In contrast to Kickstarter, in a vast majority of cases GoFundMe contributors don't have the option to select compensentory rewards, and we therefore regard our GoFundMe data as requests for purely altruistic actions. As a general preprocessing step, in all of our analyses we remove punctuation from strings, and convert all characters to lower case.
 
 To compare the language used on Kickstarter to purely commercial and purely altrustic pitches, we adopt a Bayesian approach that has previously been successful in comparing the language used by two political parties on a specific issue \cite{monroe2008fightin}. This model has been used to compare word usage between two corpora in a princpled way. Under the model, language is modeled as a ``bag of words'' represented by a multinomial distribution over vocabulary items. For the two corpora in question, we assume that their language vectors are drawn from a Dirichlet prior. Though it is possible in this scenario to encode useful information in the prior, we find it sufficient to utilize an uninformative prior and set our Dirichlet hyperparameter to be $\alpha=.01$. Assuming this language model, it becomes possible to compute approximate differences in vocabulary usages, and approximate variances of those differences.
 
@@ -98,11 +101,11 @@ In order to use this model, one must first define a vocabulary. Because we are i
 
 To apply a more stringent topic controlling filter after removing n-grams that don't appear in all categories, for each n-gram $n$, we compute the intra-category document frequency denoted $f_n^c$ for all categories $c$. We then compute the ``normalized width'' $w_n$ for n-gram $n$ as...
 
-\begin{equation} \label{eq:spread}
+\begin{equation} \label{eq:width}
 w_n = \frac{\max\limits_{c'}f_n^{c'} - \min\limits_{c'}f_n^{c'}}{\max\limits_{c'}f_n^{c'}}
 \end{equation}
 
-The intuition behind normalized width is as follows -- if a word appears in all categories with roughly the same frequency, the normalized spread will be small. If a word appears very frequently in a single category, the normalized width will be large. After computing all normalized widths, we filter out the 10\% of n-grams with highest normalized width.
+The intuition behind normalized width is as follows -- if a word appears in all categories with roughly the same frequency, the normalized width will be small. If a word appears very frequently in a single category, the normalized width will be large. After computing all normalized widths, we filter out the 10\% of n-grams with highest normalized width.
 
 After this two-part filtration scheme is applied to all three datasets, we take an intersection of the resulting n-grams to form our final vocabulary, which contains 2077 n-grams. The results of these analyses are summarized in Table \ref{tab:pairwise}.
 
@@ -118,23 +121,22 @@ Overall, we argue this analysis demonstrates that discourse on Kickstarter is ne
 \begin{table}
 \centering
 \footnotesize
-\begin{tabular}{|l|L{2.8cm}|}
+\begin{tabular}{|l|L{4cm}|}
 \hline
-Number of Sentences & Top 3 Trigrams \\\hline
-551 & \specialcell{`one of the'\\`all of the'\\`is one of'} \\\hline
-275 & \specialcell{`is too small'\\`you can help'\\`you can give'} \\\hline
-288 & \specialcell{`thank you for'\\`you for your'\\`thank you so'}\\\hline
-1190 & \specialcell{`be able to'\\`to be able'\\`\# year old'}\\\hline
-708 & \specialcell{`to the hospital'\\`to the er'\\`him to the'}\\\hline
-457 & \specialcell{`to help with'\\`would like to'\\`and his family'}\\\hline
-641 & \specialcell{`in the hospital'\\`\# year old'\\`is in the'} \\\hline
-437 & \specialcell{`was diagnosed with'\\`my name is'\\`\# years old'} \\\hline
-498 & \specialcell{`we are asking'\\`are asking for'\\`family and friends'} \\\hline 
-334 & \specialcell{`be greatly appreciated'\\`will be greatly'\\`will be a'} \\\hline
-216 & \specialcell{`he is a'\\`he is in'\\`\# years old'} \\\hline
-1520* & \specialcell{'to be a'\\`as well as'\\`to and from'} \\\hline
+Number of Sentences & Top 5 trigrams \\\hline
+178 & \specialcell{`would be greatly appreciated'\\`as you can imagine'\\`donation is too small'\\`no donation is too'\\`you can to help'}\\\hline
+254 & \specialcell{`thank you for your'\\`thank you so much'\\`for taking the time'\\`the time to read'\\`taking the time to'}\\\hline
+356 & \specialcell{`to be able to'\\`not be able to'\\`will be able to'\\`be able to work'\\`will not be able'}\\\hline
+192 & \specialcell{`to go to the'\\`to the er and'\\`back to the hospital'\\`rushed to the hospital'\\`go to the hospital'}\\\hline
+275 & \specialcell{`we are asking for'\\`are asking for help'\\`our friends and family'\\`my family and i'\\`help raise money for'}\\\hline
+243 & \specialcell{`in the middle of'\\`the middle of the'\\`a \# year old'\\`in the hospital and'\\`middle of the night'}\\\hline
+272 & \specialcell{`was diagnosed with stage'\\`diagnosed with stage \#'\\`she was diagnosed with'\\`has been diagnosed with'\\`was diagnosed with a'}\\\hline
+255 & \specialcell{`is one of the'\\`one of the most'\\`find it in your'\\`for all of the'\\`it in your heart'}\\\hline
+181 & \specialcell{`will be greatly appreciated'\\`will be a long'\\`long road to recovery'\\`update NAME had chemo'\\`him and his family'}\\\hline
+224 & \specialcell{`to help with medical'\\`will go directly to'\\`to raise money for'\\`during this difficult time'\\`if you would like'}\\\hline
+104 & \specialcell{`he is able to'\\`he is in a'\\`fighting for his life'\\`a good fight and'\\`of you may not'}\\\hline
 \end{tabular}
-\caption{Clustering derived from the content model. The asterisk indicates the etcetera cluster.}
+\caption{11 content clusters derived from the content model.}
 \label{tab:contentmodel}
 \end{table}
 
@@ -144,9 +146,9 @@ The goal of a content model is to learn a set of sentence clusters utilizing ord
 
 For each of the resulting non-etcetera clusters, we train a smoothed bigram language model which is able to assign probabilities to input sentences. For the etcetera cluster, we train a ``complentary'' language model which assigns high probability to sentences that all other language models assign low probability to.
 
-After training these language models, we now treat each clustering as a state in a Hidden Markov Model, and all input documents as emissions from that Hidden Markov Model. We are able to compute the Viterbi path for each document, and we re-cluster sentences based on these most-likely paths. Finally, we retrain each of the language models based on the new clustering. This process of re-clustering, computing Viterbi paths, and re-training language models in an expectation maximization like fashion is executed until 
+After training these language models, we now treat each clustering as a state in a Hidden Markov Model, and all input documents as emissions from that Hidden Markov Model. We are able to compute the Viterbi path for each document, and we re-cluster sentences based on these most-likely paths. Finally, we retrain each of the language models based on the new clustering. This process of re-clustering, computing Viterbi paths, and re-training language models in an expectation maximization like fashion is executed until convergence or a maximum number of iterations is made. 
 
-We apply the content model to a small subset of the GoFundMe corpus (460 documents with a total of 7K sentences) corresponding to the campaigns listed in the ``Medical'' category. We utilize 11 content clusters and 1 etcetera cluster in our model. Though the original literature sugguests a larger number of clusters (30+) we opt for a smaller, interpretable analysis because our resulting model was not used for any information ordering or information extraction tasks, as in \cite{barzilay2004catching}. After our expectation maximization converged, we were left with the order-aware sentence clusters displayed in Table \ref{tab:contentmodel}.
+We apply the content model to a small subset of the GoFundMe corpus (460 documents with a total of 7K sentences) corresponding to the campaigns listed in the ``Medical'' category. We utilize 11 content clusters and 1 etcetera cluster in our model. Though the original literature sugguests a larger number of clusters (30+) we opt for a smaller, interpretable analysis because our resulting model was not used for any information ordering or information extraction tasks, as in \cite{barzilay2004catching}. After our expectation maximization converged after nine iterations, we were left with the order-aware sentence clusters displayed in Table \ref{tab:contentmodel} (etcetera cluster omitted).
 
 \section{Prediction of Altruism on Kickstarter}
 \begin{table}
@@ -167,34 +169,107 @@ Facebook Connected & Indicates whether or not project owners have personal Faceb
 \caption{Descriptions of the control features used in the regression tasks.}
 \label{tab:controls}
 \end{table}
+
 How does altruism manifest on Kickstarter? When a user backs a project on Kickstarter (which is impossible to do anonymously) they are prompted to select a backer reward of value less than or equal to their donation amount. If a user does not want to claim a reward but, rather, donate altruistically, there exists an option that allows them to claim no rewards. Because the total number of claims for each non-altruistic reward are displayed publicly on the project page, along with the total number of backers (altruistic and non-altruistic alike) we are able to compute the total number of purely altruistic donation events for each project. Furthermore, the site allows for users to give an amount exceeding the cost of a given reward, so we are able to compute the total amount donated to a project above and beyond the amount required for all the posted reward claims. As previously noted, altruistic donation events constitute 10.59\% of all donation events and 21.59\% of all money donated in our dataset (over 53M dollars) was given away.
 
-In a similar vein to \cite{mitra2014language} we define a binary altruistic response variable and train several logistic regression classifiers to predict that variable. The response variable is defined as follows: if a project recieves any donations and the proportion of altruistic donations it recieves exceeds $10\%$, we assign it to the altruistic group, otherwise, it is assigned to the non-altruistic group. Defining this control variable partitions the dataset into 26733 altruistic projects and 19077 non-altruistic projects giving a constant prediction baseline of 58.34\% accuracy.
+In a similar vein to \cite{mitra2014language} we define a binary altruistic response variable and train several logistic regression classifiers to predict that variable. The response variable is defined as follows: if a project recieves any donations and the proportion of altruistic donations it recieves exceeds $10\%$, we assign it to the altruistic group, otherwise, it is assigned to the non-altruistic group. We can interpret this binary variable as ``recieved more than an average number of altruistic donations.'' Defining this control variable partitions the dataset into 26733 altruistic projects and 19077 non-altruistic projects giving a constant prediction baseline of 58.34\% accuracy.
 
 Out first regression task consists of a controls-only baseline. The set of control variables, which mostly mirrors Mitra and Gilbert's control set, consists of 49 binary variables, one for each Kickstarter project category (``Theater,'' ``Indie Rock,'' ``Open Software,'' etc.) and an additional 10 variables summarized in Table \ref{tab:controls}.
 
-We use glmnet \cite{friedman2010glmnet} for our regression tasks. glmnet is a software package that implements cyclic coordinate decent and is capable of performing penalized regression tasks on highly sparse datasets. For our experiments, we utilize an $L_1$ (lasso) regularization term in an attempt to enforce sparsity and derive a parsimonious model, and set glmnet to perform 10-fold cross validation to search for the optimal regularization coefficient. Notably, glmnet purposefully does not report standard errors on resulting feature coefficients because the regularization process intorudces substantial bias into the regression process.
+We use glmnet \cite{friedman2010glmnet} for our regression tasks. glmnet is a software package that implements cyclic coordinate decent and is capable of performing penalized regression tasks on highly sparse datasets. For our experiments, we utilize an $L_1$ (lasso) regularization term in an attempt to enforce sparsity and derive a parsimonious model, and set glmnet to perform 10-fold cross validation to search for the optimal regularization coefficient and prevent overfitting. In addition to training a model on all the data, as a seperate measure we also report test accuracy when spliting our data into a 40k project training set and a 5k project test set. Notably, glmnet purposefully does not report standard errors on resulting feature coefficients because the regularization process intorudces substantial bias into the regression process.
 
-Our best controls only logistic regression model had a cross-validation accuracy of 64.42\%, improving upon our constant prediction baseline by 6.08\%. The most important positive and negative predictive features were all Kickstarter category control variables. Dance, theater, public art, performance art, and classical music ($\vec{\beta} = \langle 1.84, 1.56, 1.24, 1.04, .930 \rangle$, respectively) were the categorical variables which were the strongest positive predictors, whereas board/card games, games, comics, video games, and product design ($\vec{\beta} = \langle -1.64, -1.23, -1.02, -.862, -.795 \rangle$, respectively) were the strongest negative predictors. This result indicates that product category is the most important factor in determining if a project will recieve altruistic donations, and perhaps that projects in artistic categories are more likely to recieve such Kickstarter backing. This result is fairly unsurprising -- artistic endevours are generally regarded as intrinsically valuable to society (CITECITECITE), and the negatively predictive categories tend to have concretely associated products with their projects (a video game, for instance). Some non-categorical positive predictors included
+Using a model consisting of controls only, we achieve a cross-validation accuracy of 64.53\% (6.19\% improvement over constant prediction) and a testing set accuracy of 63.80\% (5.46\% improvement). The most important positive and negative predictive features were all Kickstarter category control variables. Dance, theater, public art, performance art, and classical music ($\vec{\beta} = \langle 1.84, 1.56, 1.24, 1.04, .930 \rangle$, respectively) were the categorical variables which were the strongest positive predictors, whereas board/card games, games, comics, video games, and product design ($\vec{\beta} = -\langle 1.64, 1.23, 1.02, .862, .795 \rangle$, respectively) were the strongest negative predictors. This result indicates that product category is the most important factor in determining if a project will recieve altruistic donations, and perhaps that projects in artistic categories are more likely to recieve such Kickstarter backing. This result is fairly unsurprising -- artistic endevours are generally regarded as intrinsically valuable to society, as evidenced by the existance of organizations like the National Endowment of the Arts which has, to date, awarded more than 5B dollars for artistic endevours\footnote{\url{http://arts.gov/about-nea}}. The negatively predictive categories tend to have concretely associated products with their projects (a video game, for instance) and backers likely pre-order instead of donate, in general.
 
-Our textual features consist of binary indicator variables for unigrams, bigrams, and trigrams in the project descriptions, FAQ question/answers, and reward descriptions of our Kickstarter projects. We apply both a category filter and a variance filter to determine our resulting n-gram set. Our category filter requires all n-grams to appear in all 49 categories. For our variance filter, we consider the usage of a given n-gram over all categories, and compute the variance of the resulting multinomial distribution. Finally, we remove from consideration the most variable 25\% of n-grams. Applying this two-part filtration process, we end up with 30784 category and variance filtered n-grams.
+The most important non-categorical positive predictor was having a video (binary variable, $\beta = .45$). On the other hand, being featured (binary variable, $\beta = -.183$) and having many comments on a project (interger variable, $\beta = -.00168$) were associated with less altruistic donations.
 
-The goal of this filtration process is to produce a set of n-grams that are independent of topic. For instance, because the term ``art project'' is used significantly more readily in artistic Kickstarter categories, its significance in regression is more topically meaningful than lingustically meaningful, as the corresponding covariate is highly colinear with the artistic category indicator variables.
-
-When we incorporate these particular lingustic features, our cross-validation accuracy XXXXX.
-
-\section{Failing Projects, More Donations?}
-
-\begin{figure*}
+\begin{table}[t]
 \centering
-\includegraphics[width=.9\textwidth]{figures/failSuccess.png}                         
-\caption{temp}
-\label{fig:succfail}
+\begin{tabular}{|l|l|}
+\hline
+Positive Predictors & Negative Predictor \\
+\hline
+universitys, .377 & people that are, -.384 \\
+the challenge of, .308 & we going, -.348\\
+so exciting, .296 & with international, -.278\\
+at the park, .293 & can walk, -.271\\
+taken off, .292 & ground the, -.260\\
+my senior, .284 & complement, -.259\\
+whatever you can, .277 & get in on, -.253\\
+to austin, .252 & 20 you, -.227\\
+to maintain a, .243 & must make, -.217\\
+500 you will, .238 & my website at, -.212\\
+underserved, .232 & use one, -.209 \\
+way your, .232 & other ways you, -.204\\
+recipient of, .230 & so we know, -.193\\
+small portion of, .226 & this project it, -.191\\
+was chosen, .224 & and rare, -.188\\
+\hline
+\end{tabular}
+\caption{The top 15 positive and negative lingustic predictors of the binary variable ``did this project recieve an above average proportion of altruistic donations'' in the controls + n-grams model.}
+\label{tab:regression}
+\end{table}
+
+Does accounting for linguistic content of a project increase our predictive accuracy? Our textual features consist of binary indicator variables for unigrams, bigrams, and trigrams in the project descriptions, FAQ question/answers, and reward descriptions of our Kickstarter projects. We apply the same two-part filter that we use in our previous analysis to determine a set of topic-free n-grams, which forces selected n-grams to appear in every Kickstarter category and be relatively uniformly distributed between them (see Equation \ref{eq:width}). Applying this two-part filtration process on our Kickstarter dataset exclusively, we end up with 31281 filtered n-grams.
+
+When we incorporate these particular lingustic features, our cross-validation accuracy increases to 67.02\% (2.49\% improvement over controls-only baseline) and our testing accuracy increases to 66.68\% (2.88\% improvement). The inclusion of lingustic features, therefore, causes our predictive accuracy to increase slightly but significantly.
+
+Which n-grams are most predictive of greater-than-average donation frequency? The top 15 most significant positive and negative predictive lingustic features along with their corresponding regression coefficients are displayed in Table \ref{tab:regression}.
+
+Are there any discernable patterns among these n-grams?
+\begin{figure*}[hb]
+\centering
+\subfloat{
+  \includegraphics[width=.3\textwidth]{figures/Musicevents.png}
+}
+\subfloat{
+  \includegraphics[width=.3\textwidth]{figures/FilmVideoevents.png}
+}
+\subfloat{
+  \includegraphics[width=.3\textwidth]{figures/Artevents.png}
+}
+\hspace{0mm}
+\subfloat{
+  \includegraphics[width=.3\textwidth]{figures/Musicvals.png}
+}
+\subfloat{
+  \includegraphics[width=.3\textwidth]{figures/FilmVideovals.png}
+}
+\subfloat{
+  \includegraphics[width=.3\textwidth]{figures/Artvals.png}
+}
+\caption{Top row: event-based altruism distribution. x-axis represents the proportion of all donation events where contributors selected ``no reward'' when compared to all donation events for a project. Bottom row: dollar value-based altruism distribution. x-axis represents the proportion of all money raised that was given above-and-beyond the required value of the claimed rewards, when compared to the total amount raised for a given project. For both rows, dotted lines indicate means for successful and unsuccessful projects. The three columns represent projects from the most popular categories, ``Music,'' ``Film and Video,'' and ``Art,'' though similar patterns often emerge in categories like ``Technology'' and ``Games.''}
+\label{fig:failsuccgraphs}
 \end{figure*}
+\section{Failing Projects, More Donations?}
+What is the relationship between project success and the proportion of altruistic donations a project recieves? One might reasonably expect that successful projects, having higher quality pitches and commanding more donations on average, would also have a higher proportion of altruistic donations. In fact, the conclusions based on the analysis in this section find the \emph{opposite} to be true -- we find that, in fact, that there is a consistent negative association between project success and proportion of altruistic donations recieved.
+
+To address this question, we first run a new lasso penalized regression task where predictive variables consist of the control variables highlighted in Table \ref{tab:controls} plus two additional binary variables ``success,'' which indicates whether or not the funding goal of the project was reached, and ``numBackers,'' the total number of backers for a given project. The target of this new regression is the proportion of altruistic donations a project recieves. Because our target is a ratio that is highly sensitive to noise if the number of project backers is small, we restrict our consideration to the 30858 projects in our dataset with 10 or more backers (though the results presented here are robust to reasonable changes in this threshold).
+
+Surprisingly, our resulting regression assigns negative weights to both our new predictive variables. With respect to the number of backers, the negative weight assigned to this variable indicates that more popular projects are less likely to recieve altruistic donations, in general. More surprising, however, is that after controling for all variables in Table \ref{tab:controls} and project size, successful projects recieve \emph{less} altruistic donations than unsuccessful projects.
+
+To further investigate this result, we split all projects with more than ten backers into the 13 main categories on Kickstarter\footnote{Our previous analysis mentioned 49 categories, but this division takes into account subcategories of the main categories. For this analysis, we use only the main categories.}. Next, we compute the distribution of two statistics for each category: the proportion of altruistic donation events (i.e. the number of times a backer selected the ``no reward'' option divided by the total number of backers) and the proportion of total project funding resulting from above-and-beyond contribution which is given by
+\begin{equation} \label{eq:altruism}
+\frac{\sum\limits_{x \in \text{ Rewards of $p$}} \text{Backers}(x) \cdot \text{Cost}(x)}
+{\text{Amount Raised}(p)}
+\end{equation}
+for some project $p$.
+
+For the event donation frequencies, there is a clear pattern: in 12 of the 13 Kickstarter categories (the exception being ``Food'') failing projects recieve a higher proportion of altruistic donations, on average. In seven of the thirteen categories, this result is significant at the 5\% level. For categories with large numbers of projects, this result is often highly significant. For instance, in the two most popular Kickstarter categories, ``Music'' and ``Film and Video,'' we observe a that failed projects recieve, on average, significantly more altruistic donation events (Student's t-test, $p<<.001$ in both cases). Sample plots of the event distributions are presented in the first row of Figure FIG.
+
+When we change the focus of our analysis from events to dollar values, however, this pattern becomes less apparent, or reverses altogether. In the ``Film and Video'' category, for instance, we observe a total reversal, a significant result ($p << .001$) that states successful projects receive more dollars altruistically than failed projects. In the ``Music'' category, the test statistic is close to zero,  In fact, over all categories all statistically significant results ( state that successful projects. Sample plots of the dollar value distributions are presented in the second row of Figure FIG.
+
+What does this discrepency between events and dollar value mean? We suspect that the many significant results for our event-based analysis indicate that, indeed, failing projects recieve, on average, more altruistic donation events. However, the value of these donations is likely small, as many of these results don't hold when actual dollar values are considered.
+
+We believe that this result sugguests the following scenario is common across many categories: a Kickstarter user observes that a project is failing and makes a small donation, but requests no reward. It has been shown that feelings of sympathy can elicit prosocial behavior, even if the interaction can be easily avoided, as it would be by anonymously closing a browswer window \cite{eisenberg1989relation}. If the cost of such an altruistic action is too high, however, it has a lower probability of being taken \cite{batson1983influence}. Though an assignment of altruistic donations to values directly would be valuable to our analysis, given the data that Kickstarter makes public, there is no way to directly compute the value of the altruistic donation events themselves, and we leave a more detailed analysis to future work on a seperate dataset.
+
+Our hypothesis regarding low-cost donations fits very well into the framework established by previous psychological studies, assuming that feelings of sympathy are the driving force behind donation to failing projects. The existance and popularity of website entitled KickEnded\footnote{\url{http://kickended.com/about}} lends crediability to this theory. On KickEnded, finished Kickstarter projects with zero backers are archived so that they may ``live a second life... free from the pressure of money raising.'' The notion that commercial success does not equate to societial value is a highly sympathetic one. Though this evidence is rather indirect, it is a fairly strong indicator of the dynamics underlying our data.
+
+Assuming our hypothesis is correct, several interesting questions arise. Who are these low-cost altruistic donators? Are their motiviations sympathetic, as the psychology literature and Kickended's popularity sugguest? Are there sub-communities of altruistic users? Are there community-derived benefits to making altruistic donations on Kickstarter? These specific questions would be best answered by Kickstarter users themselves; interesting future work might include questionaires sent out to a specifically targeted user base.
 
 \section{Conclusion}
 
-\bibliographystyle{aaai} \bibliography{refs}
+Here, we presented several analyses relating to altruistic behavior on crowdfunding sites with a focus on language.
 
+\bibliographystyle{aaai} \bibliography{refs}
 
 \end{document}
