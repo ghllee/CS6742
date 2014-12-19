@@ -88,7 +88,7 @@ easy & 82.72 & out of & 71.67 & one of the & 30.97 \\\hline
 \label{tab:pairwise}
 \end{table*}
 
-Furthermore, in our dataset consisting of 45810 completed Kickstarter projects, we are able to quantify the number of purely altruistic donation events and the total value given above and beyond the amount required for all reward claims. Of the roughly 3.4M donation events, about 360K (10.59\%) resulted from users who selected no reward. Of the roughly \$246M pledged in our dataset, over \$53M (21.59\%) was given altruistically. Compared to previous analyses of altruism in online communities THIS IS A LOT OF MONEY.
+Furthermore, in our dataset consisting of 45K completed Kickstarter projects, we are able to quantify the number of purely altruistic donation events and the total value given above and beyond the amount required for all reward claims. Of the roughly 3.4M donation events, about 360K (10.59\%) resulted from users who selected no reward. Of the roughly \$246M pledged in our dataset, over \$53M (21.59\%) was given altruistically. Compared to previous analyses of altruism in online communities THIS IS A LOT OF MONEY.
 
 The community and language of Kickstarter have been studied previously. Mitra and Gilbert analyze the language that predicts successful Kickstarter projects \cite{mitra2014language}. When compared their baseline regression trained on language-indepedent project features, their final classifier, which includes n-gram counts, is able to classify projects 15\% more accurately, resulting in a 97.8\% correct prediction rate in a 10-fold cross validation setting. Similar analyses that do not take language fully into account are not able to achieve such predictive accuracy. Studies that use of minimal textual information in conjunction with baseline project features are able to learn classifiers that reach 68\% accuracy using information available at launch time \cite{greenberg2013crowdfunding}. Even using post-launch information, however, does not improve accuracy as much as accounting for language; 85\% accuracy is achieved using information available after 15\% of the duration of the campaign has expired \cite{etter2013launch}. These findings sugguest that language is very important on Kickstarter, which is a primary motivation for making it a focus of our analysis.
 
@@ -98,10 +98,16 @@ These observations and previous work motivate our research questions: how does t
 
 \section{Primary Dataset}
 
+Our dataset consists of 45810 completed Kickstarter projects, the URLs of which were originally collected by AppsBlogger.com. The projects in our data were all active sometime between April 2009, the earliest start date, and August 2012, the latest end date. Every Kickstarter project has an associated HTML page, which we parse using the popular HTML parsing library Beautiful Soup 4\footnote{\url{http://www.crummy.com/software/BeautifulSoup/}}. Each project's page contains information about the project such as its title, its description, the rewards (with associated cost, number of backers who have claimed that reward, and a description), the FAQ section, the total number of backers, and the total amount of money raised. This information served as the basis of our analysis.
+
+Kickstarter projects are also associated with a single category. The category of a Kickstarter project is used by the site to index projects and to help users find projects of a specific type. While some of these categories (13) are ``main'' categories, most are ``subcategories'' that have a corresponding main category. In most cases, we treat all categories as equivalent, irrespective of whether or not it is a sub or a main.
+
+In all of our analyses as a preprocessing step for text data, we remove punctuation from strings and convert all characters to lower case, but do not discard stop words. In general, we are interested in unigrams, bigrams, and trigrams, and tokenize after these preprocessing steps.
+
 \section{Kickstarter vs. GoFundMe and Amazon}
 What language used on Kickstarter is altruistic? What language used on Kickstarter is commercial? To address these questions, it might be possible to derive stringent definitions of altruism and salespersonship. However, for our analysis, we resort to a more objective analysis by incorporating two additional data sets, one from Amazon and one from GoFundMe.
 
-Amazon is a very popular online marketplace, where users can purchase items from a wide range of categories. Each product is associated with a description and and a set of categories. Our dataset consists of just over 1M Amazon product descriptions \cite{mcauley2013hidden}. We believe that Amazon product descriptions can be considered as purely commercial. On the other hand, GoFundMe is a crowdfunding site similar to Kickstarter, but campaigns are generally more focused on charitable/personal ventures. For instance, a popular category on GoFundMe is ``Medical,'' wherein users create pages to raise money for medical expenses for family and friends. Our dataset consists of 7.7K GoFundMe project descriptions. In contrast to Kickstarter, in a vast majority of cases GoFundMe contributors don't have the option to select compensentory rewards, and we therefore regard our GoFundMe data as requests for purely altruistic actions. As a general preprocessing step, in all of our analyses we remove punctuation from strings, and convert all characters to lower case.
+Amazon is a very popular online marketplace, where users can purchase items from a wide range of categories. Each product is associated with a description and and a set of categories. Our dataset consists of just over 1M Amazon product descriptions \cite{mcauley2013hidden}. We believe that Amazon product descriptions can be considered as purely commercial. On the other hand, GoFundMe is a crowdfunding site similar to Kickstarter, but campaigns are generally more focused on charitable/personal ventures. For instance, a popular category on GoFundMe is ``Medical,'' wherein users create pages to raise money for medical expenses for family and friends. Our dataset consists of 7.7K GoFundMe project descriptions scraped in November 2014. In contrast to Kickstarter, in a vast majority of cases GoFundMe contributors don't have the option to select compensentory rewards, and we therefore regard our GoFundMe data as requests for purely altruistic actions.
 
 To compare the language used on Kickstarter to purely commercial and purely altrustic pitches, we adopt a Bayesian approach that has previously been successful in comparing the language used by two political parties on a specific issue \cite{monroe2008fightin}. This model has been used to compare word usage between two corpora in a princpled way. Under the model, language is modeled as a ``bag of words'' represented by a multinomial distribution over vocabulary items. For the two corpora in question, we assume that their language vectors are drawn from a Dirichlet prior. Though it is possible in this scenario to encode useful information in the prior, we find it sufficient to utilize an uninformative prior and set our Dirichlet hyperparameter to be $\alpha=.01$. Assuming this language model, it becomes possible to compute approximate differences in vocabulary usages, and approximate variances of those differences.
 
@@ -131,22 +137,29 @@ Overall, we argue this analysis demonstrates that discourse on Kickstarter is ne
 \footnotesize
 \begin{tabular}{|l|L{4cm}|}
 \hline
-Number of Sentences & Top 5 trigrams \\\hline
-178 & \specialcell{`would be greatly appreciated'\\`as you can imagine'\\`donation is too small'\\`no donation is too'\\`you can to help'}\\\hline
-254 & \specialcell{`thank you for your'\\`thank you so much'\\`for taking the time'\\`the time to read'\\`taking the time to'}\\\hline
-356 & \specialcell{`to be able to'\\`not be able to'\\`will be able to'\\`be able to work'\\`will not be able'}\\\hline
-192 & \specialcell{`to go to the'\\`to the er and'\\`back to the hospital'\\`rushed to the hospital'\\`go to the hospital'}\\\hline
-275 & \specialcell{`we are asking for'\\`are asking for help'\\`our friends and family'\\`my family and i'\\`help raise money for'}\\\hline
-243 & \specialcell{`in the middle of'\\`the middle of the'\\`a \# year old'\\`in the hospital and'\\`middle of the night'}\\\hline
-272 & \specialcell{`was diagnosed with stage'\\`diagnosed with stage \#'\\`she was diagnosed with'\\`has been diagnosed with'\\`was diagnosed with a'}\\\hline
-255 & \specialcell{`is one of the'\\`one of the most'\\`find it in your'\\`for all of the'\\`it in your heart'}\\\hline
-181 & \specialcell{`will be greatly appreciated'\\`will be a long'\\`long road to recovery'\\`update NAME had chemo'\\`him and his family'}\\\hline
-224 & \specialcell{`to help with medical'\\`will go directly to'\\`to raise money for'\\`during this difficult time'\\`if you would like'}\\\hline
-104 & \specialcell{`he is able to'\\`he is in a'\\`fighting for his life'\\`a good fight and'\\`of you may not'}\\\hline
+Number of Sentences & Top 3 4-grams \\\hline
+178 & \specialcell{`would be greatly appreciated'\\`as you can imagine'\\`donation is too small'}\\\hline
+254 & \specialcell{`thank you for your'\\`thank you so much'\\`for taking the time'}\\\hline
+356 & \specialcell{`to be able to'\\`not be able to'\\`will be able to'}\\\hline
+192 & \specialcell{`to go to the'\\`to the er and'\\`back to the hospital'}\\\hline
+275 & \specialcell{`we are asking for'\\`are asking for help'\\`our friends and family'}\\\hline
+243 & \specialcell{`in the middle of'\\`the middle of the'\\`a \# year old'}\\\hline
+272 & \specialcell{`was diagnosed with stage'\\`diagnosed with stage \#'\\`she was diagnosed with'}\\\hline
+255 & \specialcell{`is one of the'\\`one of the most'\\`find it in your'}\\\hline
+181 & \specialcell{`will be greatly appreciated'\\`will be a long'\\`long road to recovery'}\\\hline
+224 & \specialcell{`to help with medical'\\`will go directly to'\\`to raise money for'}\\\hline
+104 & \specialcell{`he is able to'\\`he is in a'\\`fighting for his life'}\\\hline
 \end{tabular}
 \caption{11 content clusters derived from the content model.}
 \label{tab:contentmodel}
 \end{table}
+
+\begin{figure}
+\centering
+\includegraphics[width=.45\textwidth]{figures/docpos.png}
+\caption{The average document position of sentences in the ``Introduction'' and ``Thank you'' clusters. It's clear that, in general, sentences related diagnoses occur at the beginning of documents, where as thank you's are expressed at the end. Similar histograms for all other clusters are superimposed in black for comparison.}
+\label{fig:docpos}
+\end{figure}
 
 To analyze the sequential structure of requests, we run a case study on a subset of data utilizing a content model \cite{barzilay2004catching} to produce a sentence clustering. A content model is an unsupervized learning algorithm that operates on the sentence level, takes information order into account, and learns transition probabilities between sentence types. Here we provide a brief overview of the content model algorithm; for a fuller description, consult the original paper.
 
@@ -154,9 +167,18 @@ The goal of a content model is to learn a set of sentence clusters utilizing ord
 
 For each of the resulting non-etcetera clusters, we train a smoothed bigram language model which is able to assign probabilities to input sentences. For the etcetera cluster, we train a ``complentary'' language model which assigns high probability to sentences that all other language models assign low probability to.
 
-After training these language models, we now treat each clustering as a state in a Hidden Markov Model, and all input documents as emissions from that Hidden Markov Model. We are able to compute the Viterbi path for each document, and we re-cluster sentences based on these most-likely paths. Finally, we retrain each of the language models based on the new clustering. This process of re-clustering, computing Viterbi paths, and re-training language models in an expectation maximization like fashion is executed until convergence or a maximum number of iterations is made. 
+After training these language models, we now treat each clustering as a state in a Hidden Markov Model, and all input documents as emissions from that Hidden Markov Model. We are able to compute the Viterbi path for each document, and we re-cluster sentences based on these most-likely paths. Finally, we retrain each of the language models based on the new clustering. This process of re-clustering, computing Viterbi paths, and re-training language models in an expectation 
+maximization like fashion is executed until convergence or a maximum number of iterations is made. 
+
+In accordance with the reccomendations of the original authors, we attempt to map all named entities to a ``NAME'' token and all numbers to a ``NUM'' token. We use the default NLTK\footnote{\url{http://www.nltk.org/}} named entity recognizer to identify tokens to be mapped to ``NAME,'' and we map any token that parses to a float without error to ``NUM.''
 
 We apply the content model to a small subset of the GoFundMe corpus (460 documents with a total of 7K sentences) corresponding to the campaigns listed in the ``Medical'' category. We utilize 11 content clusters and 1 etcetera cluster in our model. Though the original literature sugguests a larger number of clusters (30+) we opt for a smaller, interpretable analysis because our resulting model was not used for any information ordering or information extraction tasks, as in \cite{barzilay2004catching}. After our expectation maximization converged after nine iterations, we were left with the order-aware sentence clusters displayed in Table \ref{tab:contentmodel} (etcetera cluster omitted).
+
+. For the remaineder of this analysis, we are going to focus on the cluster containing 254 sentences (dubbed the ``Thank you'' cluster) and the cluster containing 272 sentences (dubbed the ``Introduction'' cluster).
+
+Content models carry with them the advantage that sentences with disjoint bigram features may be clustered together based on the order of sentences. For instance, ``your contributions big or small are greatly appreciated,'' ``as a family we thank you,'' and ``god bless you have a wonderful day'' are clustered together in the ``Thank you'' cluster. Despite the three sentences having disjoint bigram features and being entirely dissimilar according to the basic intialization scheme, the content model is able to discern that the three likely have similar meaning based on their placement in documents relative to other sentences.
+
+There are many interesting things that can be learned from the transition probabilities output by the content model, the most interpretable of which is illustrated in Figure \ref{fig:docpos}. This figure illustrates the distribution of normalized sentence position in . While this result is somewhat unsurprising (situations are introduced before authors thank readers) it demonstrates that the content model is able to learn useful information about ordering in an unsupervised fashion.
 
 \section{Prediction of Altruism on Kickstarter}
 \begin{table}
@@ -313,7 +335,7 @@ Here, we presented several analyses relating to altruistic behavior on crowdfund
 
 \section{Acknowledgements}
 
-We would like to thank Eric Gilbert and Tanushree Mitra for providing their HTML scrape of Kickstarter, and all members of the Fall 2014 iteration of Cornell's CS6742 for their helpful conversations.
+We would like to thank Eric Gilbert and Tanushree Mitra for providing their HTML scrape of Kickstarter, and all members of the Fall 2014 iteration of Cornell's CS6742 for the helpful conversations.
 
 \bibliographystyle{aaai} \bibliography{refs}
 
