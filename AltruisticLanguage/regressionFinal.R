@@ -3,6 +3,7 @@ library('Matrix')
 library('glmnet')
 library('foreach')
 library('doParallel')
+library('AUC')
 registerDoParallel()
 rsort <- function(x) {
   sort(x, decreasing = TRUE)
@@ -20,9 +21,9 @@ colnames(dataSW) <- colnames(headersSW)
 colnames(dataNoSW) <- colnames(headersNoSW)
 colnames(dataControl) <- colnames(headersControl)
 
-dataControlTest2 <- dataControl[which(dataControl[,c("numBackers")]>=20),]
-target2 <- dataControl[which(dataControl[,c("numBackers")]>=20),c("numBackers", "numAltruistic")]
-target2 <- target2[,2]/target2[,1]
+#dataControlTest2 <- dataControl[which(dataControl[,c("numBackers")]>=20),]
+#target2 <- dataControl[which(dataControl[,c("numBackers")]>=20),c("numBackers", "numAltruistic")]
+#target2 <- target2[,2]/target2[,1]
 
 target <- dataControl[,c("numBackers", "numAltruistic")]
 target <- target[,2]/target[,1]
@@ -44,7 +45,7 @@ SW <- cv.glmnet(dataSW[,-which(colnames(dataSW) %in% c("numBackers","numAltruist
                 type.measure = "class",
                 alpha = 1, parallel = T)
 
-test2 <- cv.glmnet(dataControlTest2[,-which(colnames(dataControlTest2) %in% c("numAltruistic"))], target2, family='gaussian', alpha=1, parallel = T)
+#test2 <- cv.glmnet(dataControlTest2[,-which(colnames(dataControlTest2) %in% c("numAltruistic"))], target2, family='gaussian', alpha=1, parallel = T)
 
 holdoutNoSW <- cv.glmnet(dataNoSW[1:40000,-which(colnames(dataNoSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
                        target[1:40000], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
@@ -63,17 +64,32 @@ sum(predict(holdoutNoSW,
     == target[40001:nrow(dataNoSW)])/(length(target[40001:nrow(dataNoSW)]))
 
 print("SW Holdout Accuracy")
-sum(predict(holdoutSW,
-            dataSW[40001:nrow(dataSW),-which(colnames(dataSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
-            type='class')
-    == target[40001:nrow(dataSW)])/(length(target[40001:nrow(dataSW)]))
+pred <- predict(holdoutSW,
+                dataSW[40001:nrow(dataSW),-which(colnames(dataSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
+                type='class')
+sum(pred == target[40001:nrow(dataSW)])/(length(target[40001:nrow(dataSW)]))
+posCor <- sum(pred[target[40001:nrow(dataSW)]==1] == target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==1])
+negCor <- sum(pred[target[40001:nrow(dataSW)]==0] == target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==0])
+posFail <- sum(pred[target[40001:nrow(dataSW)]==1] != target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==1])
+negFail <- sum(pred[target[40001:nrow(dataSW)]==0] != target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==0])
+print("Percision")
+posCor/(posCor + negFail)
+print("Recall")
+posCor/(posCor + posFail)
 
 print("Control Holdout Accuracy")
-sum(predict(holdoutControl,
+pred <- predict(holdoutControl,
             dataControl[40001:nrow(dataControl),-which(colnames(dataControl) %in% c("numBackers","numAltruistic", "Osuccess"))],
             type='class')
-            == target[40001:nrow(dataControl)])/(length(target[40001:nrow(dataControl)]))
-
+sum(pred == target[40001:nrow(dataControl)])/(length(target[40001:nrow(dataControl)]))
+posCor <- sum(pred[target[40001:nrow(dataControl)]==1] == target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==1])
+negCor <- sum(pred[target[40001:nrow(dataControl)]==0] == target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==0])
+posFail <- sum(pred[target[40001:nrow(dataControl)]==1] != target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==1])
+negFail <- sum(pred[target[40001:nrow(dataControl)]==0] != target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==0])
+print("Percision")
+posCor/(posCor + negFail)
+print("Recall")
+posCor/(posCor + posFail)
 
 topBottomK <- function(cvReg, k) {
   bestlambda<-cvReg$lambda.min
