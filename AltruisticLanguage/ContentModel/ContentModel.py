@@ -13,16 +13,19 @@ from loadbar import LoadBar
 import numpy as np
 import random
 from collections import Counter, defaultdict
+import regexStore
+import os
 
 class ContentModel:
     def __init__(self, langModel = 'bigram',
-                 numClusters = 1275,
-                 minProportion = .007,
+                 numClusters = 5,#3000,
+                 minProportion = .002,
                  clusterTrainProp = 1, 
                  d1 = .00000005,
                  d2 = .001,
                  cleanSents = None,
-                 saveFile = None):
+                 saveFile = None,
+                 name = "success"):
         '''Params= numClusters, minimum cluster proportional size to not be absorbed
         into etc cluster, and (optionally) somewhere to load/save cleaned sentences from/to.'''
         self.langModel = langModel
@@ -35,7 +38,17 @@ class ContentModel:
         self.saveFile = saveFile
         self.wsTokenizer = WhitespaceTokenizer()
 
+        #model itself
+        self.name = name
+        self.lms = None
+        self.transProbs = None
+
     def train(self, documentsIn):
+        if not os.path.exists(self.name):
+            os.makedirs(self.name)
+        #os.system("cd " + self.name)
+        #os.system("rm -rf *")
+        #os.system("cd ..")
         if self.langModel is not 'bigram': warnings.warn("Language model unsupported, using bigram")
         bar = LoadBar(30)
         random.shuffle(documentsIn)
@@ -54,6 +67,7 @@ class ContentModel:
                 print "Saving cleaned sentences to " + self.saveFile
                 with open(self.saveFile, 'w') as f:
                     pickle.dump(self.cleanSents, f, -1)
+
         print "There were " + str(len(self.cleanSents)) + " sentences."
         self.cleanSents = self.cleanSents[:int(np.floor(len(self.cleanSents)*self.clusterTrainProp))]
         print "Counting vocab..."
@@ -84,7 +98,7 @@ class ContentModel:
             observedSeq = [x[1] for x in sents]
 
         #VITERBI OPTIMIZATION
-        for i in range(10):
+        for i in range(100):
             print "Iteration " + str(i)
             
             print "Training language models"
@@ -111,7 +125,7 @@ class ContentModel:
                 docDict[self.cleanSents[i][1]].append((self.cleanSents[i][0], clusters[i]))
 
             print "Estimating transition probabilities"
-            transProbs = self.getTransitionProbs(allClusters, docDict, m)
+            self.transProbs = self.getTransitionProbs(allClusters, docDict, m)
 
             newPaths = {}
             print "Estimating Viterbi paths"
@@ -126,7 +140,7 @@ class ContentModel:
                 (score, path) = self.mostLikelyPath(observedSents,
                                                     self.lms.keys(), self.lms,
                                                     {k:np.log(1./m) for k in allClusters},
-                                                    transProbs)
+                                                    self.transProbs)
                 newPaths[d] = path
                 curIter +=1
             bar.clear()
@@ -137,6 +151,14 @@ class ContentModel:
                 if curIter < 6: print newPath
                 newClusters.extend(newPath)
                 curIter += 1
+
+            print "Saving model..."
+            for cluster, model in self.lms.iteritems():
+                with open(self.name + "/" + str(cluster) + ".lm", 'w') as f:
+                    print cluster
+                    pickle.dump(model, f, -1)
+            with open(self.name + '/' + "transProbs", 'w') as f:
+                pickle.dump(self.transProbs, f, -1)
             if newClusters == clusters:
                 print "Converged"
                 break
@@ -145,13 +167,13 @@ class ContentModel:
         docDict = defaultdict(list)
         for i in range(len(self.cleanSents)):
             docDict[self.cleanSents[i][1]].append((self.cleanSents[i][0], clusters[i]))
-        with open("docPathsOut.txt",'w') as f:
+        with open(self.name + "docPathsOut.txt",'w') as f:
             for doc, sentsClusters in docDict.iteritems():
                 for sc in sentsClusters:
                     f.write(str(sc))
                 f.write("\n")
 
-        with open("clustersOut.txt",'w') as f:
+        with open(self.name + "clustersOut.txt",'w') as f:
             for i in range(len(self.cleanSents)):
                 clustSent = defaultdict(list)
                 for i in range(len(self.cleanSents)): 
@@ -211,12 +233,16 @@ class ContentModel:
                                              (D[c1] + self.d2*numClusters))
         return transProbs
 
-    def cleanSentence(self, stringIn, properNames = None, numbers = None, dates = None):
+    def cleanSentence(self, stringIn, properNames = None, numbers = None, dates = None, urls = None):
         '''Given a string and the tokens to replace different elements of the text with,
         returns strings with those aspects replaced with the given tokens. Also removes
         punctuation, and puts things in lower case.'''
+        newString = stringIn
+        if urls is not None:
+            replaced = re.findall(regexStore.urlReg, newString)
+            newString = re.sub(regexStore.urlReg, urls, newString)
         exclude = set(string.punctuation)
-        newString = "".join([ch for ch in stringIn if ch not in exclude])
+        newString = "".join([ch for ch in newString if ch not in exclude])
         if properNames is not None:
             names = set()
             taggedTokens = nltk.ne_chunk(nltk.pos_tag(self.wsTokenizer.tokenize(newString)))
@@ -260,20 +286,39 @@ def main():
     elif len(sys.argv) == 3:
         loadFile = sys.argv[1]
         loadFileClean = sys.argv[2]
-
-
+    else:
+        loadFile, loadFileClean, modelName = sys.argv[1:4]
+    
     with open(loadFile) as f:
         data = pickle.load(f)
     dataClean = None
     if loadFileClean is not None:
         with open(loadFileClean) as f:
             dataClean = pickle.load(f)
-    
-    data = [x for x in data if len(x[0].strip().split()) > 4]
-    dataClean = [x for x in dataClean if len(x[0].strip().split()) > 4]
+    data = [x for x in data if len(x.strip().split()) > 4]
+    if dataClean is not None:
+        dataClean = [x for x in dataClean if len(x[0].strip().split()) > 4]
 
-    x = ContentModel(saveFile = "Medical.clean", cleanSents = dataClean)
+    print sys.argv[2]
+    x = ContentModel(cleanSents = dataClean, name=modelName)
     x.train(data)
+
+def main2():
+    documentsIn = pickle.load(open(sys.argv[1]))
+    bar = LoadBar(30)
+    cleanSents = []
+    cm = ContentModel()
+    bar.setup()
+    for i in range(len(documentsIn)):
+        if bar.test(i, len(documentsIn)): bar += 1
+        d = documentsIn[i]
+        sents = [(cm.cleanSentence(x, properNames = "name"*4, numbers = "num"*4, urls = "url"*4) , i)
+                 for x in cm.stringToSentences(d)]
+        cleanSents.extend(sents)
+    bar.clear()
+    print "Saving cleaned sentences to XXX"
+    with open(sys.argv[2], 'w') as f:
+        pickle.dump(cleanSents, f, -1)
     
 if __name__ == "__main__":
     main()
