@@ -129,7 +129,7 @@ For all 2077 n-grams, we observe a statistically significant negative correlatio
 Overall, we argue this analysis demonstrates that discourse on Kickstarter is neither entirely Amazon-like, nor entirely GoFundMe-like, but rather lies in its own linguistic regime at the intersection of altruism and commercialism.
 \section{What do Altruistic Requests Look Like?}
 
-\begin{table}
+\begin{table}[t]
 \centering
 \footnotesize
 \begin{tabular}{|l|L{4cm}|}
@@ -179,7 +179,7 @@ For the remainder of this analysis, we are going to focus on the cluster contain
 \begin{equation} \label{eq:sentpos}
 \sum\limits_{k \in \text{Occurrences of $c$}} \frac{\text{Position of $k$ in containing sentence}}{\text{Length of sentence containing $k$}}
 \end{equation}
-While this result is somewhat unsurprising (situations are introduced before authors thank readers) it demonstrates that the content model is able to learn useful information about ordering in an unsupervised fashion, and that aspects of the sequential nature of altruistic requests are learnable by this method.
+While this result is somewhat unsurprising (situations are introduced before authors thank readers) it demonstrates that the content model is able to learn useful information about ordering in an unsupervised fashion, and that aspects of the sequential nature of altruistic requests are learnable by this method. We later use more complex content models for an order-aware classification task on Kickstarter.
 
 \section{Prediction of Altruism on Kickstarter}
 \begin{table}
@@ -209,7 +209,7 @@ Out first regression task consists of a controls-only baseline. The set of contr
 
 We use glmnet \cite{friedman2010glmnet} for our regression tasks. glmnet is a software package that implements cyclic coordinate decent and is capable of performing penalized regression tasks on highly sparse datasets. For our experiments, we utilize an $L_1$ (lasso) regularization term in an attempt to enforce sparsity and derive a parsimonious model. Furthermore, we set glmnet to perform 10-fold cross validation to search for the optimal regularization coefficient and prevent overfitting. In addition to training a model on all the data using cross-validation, as a separate measure of model generalizability we also report test accuracy when splitting our data into a 40k project training set and a 5k project test set. Notably, glmnet purposefully does not report standard errors on resulting feature coefficients because the regularization process introduces substantial bias into the regression process.
 
-Using a model consisting of controls only, we achieve a cross-validation accuracy of 64.53\% (6.19\% improvement over constant prediction) and a testing set accuracy of 63.80\% (5.46\% improvement). The most important positive and negative predictive features were all Kickstarter categorical control variables. Dance, theater, public art, performance art, and classical music ($\vec{\beta} = \langle 1.84, 1.56, 1.24, 1.04, .930 \rangle$, respectively) were the categorical variables which were the strongest positive predictors, whereas board/card games, games, comics, video games, and product design ($\vec{\beta} = -\langle 1.64, 1.23, 1.02, .862, .795 \rangle$, respectively) were the strongest negative predictors. This result indicates that product category is the most important factor in determining if a project will receive altruistic donations, and perhaps that projects in artistic categories are more likely to receive such Kickstarter backing. This result is fairly unsurprising -- artistic endeavours are generally regarded as intrinsically valuable to society, as evidenced by the existence of organizations like the National Endowment of the Arts which has, to date, awarded more than 5B dollars for artistic endeavours\footnote{\url{http://arts.gov/about-nea}}. The negatively predictive categories tend to have concretely associated products with their projects (a video game, for instance) and backers likely pre-order instead of donate, in general.
+Using a model consisting of controls only, we achieve a cross-validation accuracy of 64.53\% (6.19\% improvement over constant prediction) and a testing set accuracy of 63.80\% (5.46\% improvement, .649 precision/.837 recall). The most important positive and negative predictive features were all Kickstarter categorical control variables. Dance, theater, public art, performance art, and classical music ($\vec{\beta} = \langle 1.84, 1.56, 1.24, 1.04, .930 \rangle$, respectively) were the categorical variables which were the strongest positive predictors, whereas board/card games, games, comics, video games, and product design ($\vec{\beta} = -\langle 1.64, 1.23, 1.02, .862, .795 \rangle$, respectively) were the strongest negative predictors. This result indicates that product category is the most important factor in determining if a project will receive altruistic donations, and perhaps that projects in artistic categories are more likely to receive such Kickstarter backing. This result is fairly unsurprising -- artistic endeavours are generally regarded as intrinsically valuable to society, as evidenced by the existence of organizations like the National Endowment of the Arts which has, to date, awarded more than 5B dollars for artistic endeavours\footnote{\url{http://arts.gov/about-nea}}. The negatively predictive categories tend to have concretely associated products with their projects (a video game, for instance) and backers likely pre-order instead of donate, in general.
 
 The most important non-categorical positive predictor was having a video (binary variable, $\beta = .45$). On the other hand, being featured (binary variable, $\beta = -.183$) and having many comments on a project (integer variable, $\beta = -.00168$) were associated with less altruistic donations.
 
@@ -217,7 +217,7 @@ The most important non-categorical positive predictor was having a video (binary
 \centering
 \begin{tabular}{|l|l|}
 \hline
-Positive Predictors & Negative Predictor \\
+Positive Predictors & Negative Predictors \\
 \hline
 universitys, .377 & people that are, -.384 \\
 the challenge of, .308 & we going, -.348\\
@@ -242,11 +242,13 @@ was chosen, .224 & and rare, -.188\\
 
 Does accounting for linguistic content of a project increase our predictive accuracy? Our textual features consist of binary indicator variables for unigrams, bigrams, and trigrams in the project descriptions, FAQ question/answers, and reward descriptions of our Kickstarter projects. We apply the same two-part normalized width filter that we use in our previous analysis to determine a set of topic-free n-grams, which forces selected n-grams to appear in every Kickstarter category and be relatively uniformly distributed between them (see Equation \ref{eq:width}). Applying this two-part filtration process on our Kickstarter dataset exclusively, we end up with 31281 filtered n-grams.
 
-When we incorporate these particular linguistic features as binary indicator variables, our cross-validation accuracy increases to 67.02\% (2.49\% improvement over controls-only baseline) and our testing accuracy increases to 66.68\% (2.88\% improvement). The inclusion of linguistic features, therefore, causes our predictive accuracy to increase slightly but significantly.
+When we incorporate these particular linguistic features as binary indicator variables, our cross-validation accuracy increases to 67.02\% (2.49\% improvement over controls-only baseline) and our testing accuracy increases to 66.68\% (2.88\% improvement, .676 precision/.831 recall). The inclusion of linguistic features, therefore, causes our predictive accuracy to increase slightly but significantly. An examination of the precision and recall of both models indicates that adding lingustic features causes the logistic regression to become more selective in assigning the positive class (increased precision, decreased recall).
 
 Which n-grams are most predictive of greater-than-average donation frequency? The top 15 most significant positive and negative predictive linguistic features along with their corresponding regression coefficients are displayed in Table \ref{tab:regression}.
 
-Are there any discernible patterns among these n-grams? An examination of the most positive-predicting linguistic features reveals that the advertisement of academic affiliation is a strong predictor of receiving a higher-than-average number of altruistic donations. The usage of ``universitys'' and ``my senior,'' in particular illustrate this point.
+Are there any discernible patterns among these n-grams? Though the usage of any short sequence of words can vary considerably, we present here an examination of common usage for some of the n-grams of interest.
+
+An examination of the most positive-predicting linguistic features reveals that the advertisement of academic affiliation is a strong predictor of receiving a higher-than-average number of altruistic donations. The usage of ``universitys'' and ``my senior,'' in particular illustrate this point.
 \begin{blockquote}
 The AcaBelles are Florida State \textbf{University's} premier all-female a cappella group\ldots\par\noindent
 This is \textbf{my senior} thesis film at Pacific Union College\ldots\par\noindent
@@ -258,7 +260,7 @@ This is about to get \textbf{so exciting} for the IBP! \par\noindent
 We developed more recipes and got excited about \textbf{the challenge of} using whole foods\ldots\par\noindent
 Podcasting has really \textbf{taken off} in the past year\ldots
 \end{blockquote}
-There are also some interesting patterns in the negatively-predicting n-grams. For instance, self-describing language appears to be a consistently negative predictor of altruistic donation. Though the usage of any short sequence of words can vary considerably, common usage of linguistic features like ``people that are,'' ``we going,'' ``so we know,'' and ``my website at'' demonstrate this phenomenon.
+There are also some interesting patterns in the negatively-predicting n-grams. For instance, self-describing, rather than product describing, language appears to be a consistently negative predictor of altruistic donation. Common usage of linguistic features like ``people that are,'' ``we going,'' ``so we know,'' and ``my website at'' demonstrate this phenomenon.
 \begin{blockquote}
 We are all likable and professional \textbf{people that are} trying to build something\ldots\par\noindent
 How Are \textbf{We Going} to Pull This Off?\ldots\par\noindent
@@ -270,13 +272,22 @@ Furthermore, it seems that linguistic features that make commands of backers (``
 Participants \textbf{must make} their own travel/lodging arrangements\ldots\par\noindent
 We only have room for 4, so \textbf{get in on} this quickly\ldots
 \end{blockquote}
+It's likely this negative response is a manifestation of psychological reactance. This phenomenon occurs when one is threatened with loss of freedom of action, which, in this case, takes the form of commanding language. In most cases, humans will quickly seek to reestablish their freedoms \cite{brehm1966theory}. Here, it seems one consequence of this reaction is that users are less likely to donate altruistically to projects with commanding language.
+
 Finally, the portrayal of backer interaction with rewards also appears to have a significant effect on donations. For instance, ``recipient of'' is a strong positive predictor, whereas ``can walk'' is a strong negative predictor.
 \begin{blockquote}
 Depending on how much money you pledge you \textbf{can walk} away with something as small as a print\ldots\par\noindent
 You will be the \textbf{recipient of} TWO different designs
 \end{blockquote}
-
 Overall, there are lots of interesting linguistic and psychological observations that can be made based on the most significant positive and negative language-based predictors. A full ordered list of n-grams along with associated regression coefficients is provided\footnote{PUT LINK HERE} if the reader is interested in performing their own analysis.
+
+\subsection{Sequential Classification Task}
+In our previous experiment, we reduced the dimensionality of text by mapping every description to a ``bag of words'' style vector of binary indicator variables for a set of topic-controlled n-grams. This method of analysis carries with it several advantages, the most important of which is interpretability. However, as with all bag of words style analyses, we disregard potentially useful ordered information. Could we derive additional predictive accuracy by accounting for order?
+
+To address this question, we return to the previously described content model algorithm. Due to limited computational resources, we limit our consideration to a subset of Kickstarter consisting of 900 project descriptions from the ``Photography'' category. Considering all 1.5k projects of this category in our dataset reveals that 58.4\% of photography projects are altruistically successful, according to our previous definition. Our 900 project descriptions consist of 450 projects which recieved above average numbers altruistic donations and 450 projects which recieved below average numbers of altruistic donations. We split our dataset into a training set consisting of 600 evenly distributed projects, and a test set of the remaining 300 evenly distributed projects. Next, we train two similar content models, one for the positive class and one for the negative class. After training these content models, for each of the projects in the test set, we compute the emission probability of that document from the positive and negative models, and assign the test document the label corresponding to the model that assigned it higher probability.
+
+For a comparison, we execute an additional logistic regression
+
 \begin{figure*}[t]
 \centering
 \subfloat{

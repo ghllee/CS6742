@@ -413,7 +413,7 @@ def getValidGrams(projects, minOccur = 50, nGram = 3):
 
     return validGrams
 
-def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
+def extractTextFeatures(projects, minOccur = 10, nGram = 2, counts=False):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category. If counts = True, then the return matrix has counts features, if counts=False, then the return matrix has binary indicators'''
     #dict mapping from category -> set of n grams in that category
     catGramDict = defaultdict(set)
@@ -459,8 +459,8 @@ def extractTextFeatures(projects, minOccur = 50, nGram = 3, counts=False):
         for cat, catCount in catCounter.iteritems():
             perDocList.append((gramCatCounter[cat][v]*.1)/catCount)
         gramToVar[v] = 1.0*(np.max(perDocList)-np.min(perDocList))/np.max(perDocList)
-    validGrams = [x[0] for x in
-                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
+    #validGrams = [x[0] for x in
+    #              sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
 
     
     print "Using {} n-grams".format(len(validGrams))
@@ -587,7 +587,8 @@ def saveFeatureMatrixAndHeaders(projects, matrixOut, headersOut,
     if not control:
         data = np.concatenate([featureMatrix1,
                                featureMatrix2,
-                               featureMatrix3, numBackers, 
+                               featureMatrix3,
+                               numBackers, 
                                numAltruistic],axis = 1)
     else:
         data = np.concatenate([featureMatrix2,
@@ -596,7 +597,8 @@ def saveFeatureMatrixAndHeaders(projects, matrixOut, headersOut,
     if not control:
         headers = np.concatenate([ngrams,
                                   cats,
-                                  controls, targets])
+                                  controls,
+                                  targets])
     else:
         headers = np.concatenate([cats,
                                   controls, targets])
@@ -620,7 +622,6 @@ def compareMineToTheirs(projects):
     grams = getGramsFromFile("KS.predicts")
     #featureMatrix1, ngrams = extractTextFeatures(projects)
     
-
     myGrams = set(getValidGrams(projects))
     theirGrams = set([g[0] for g in grams])
     
@@ -642,11 +643,34 @@ def compareMineToTheirs(projects):
 def main():
     projects = loadProjects('output')
     projects = [p for p in projects if len(p.category) != 0]
-    minDate = min([p.startDate for p in projects])
-    maxDate = max([p.endDate for p in projects])
+    #minDate = min([p.startDate for p in projects])
+    #maxDate = max([p.endDate for p in projects])
     
-    print minDate
-    print maxDate
+    catDict = buildCategoryDictionary(projects)
+    music = catDict["Music"]
+    succ = [p for p in music if p.backers != 0
+            and
+            1.*(p.backers - sum([y.numBackers for y in 
+                                 p.rewards]))/(1.0*p.backers)>.1 if len(p.text) > 0]
+    fail = [p for p in music if p.backers == 0
+            or
+            1.*(p.backers - sum([y.numBackers for y in 
+                                 p.rewards]))/(1.0*p.backers)<=.1 if len(p.text) > 0]
+    pickle.dump([x.text for x in succ[:700]], open("succTrain.pickle", 'w'), -1)
+    pickle.dump([x.text for x in fail[:700]], open("failTrain.pickle", 'w'), -1)
+    pickle.dump([x.text for x in succ[700:1000]], open("succTest.pickle", 'w'), -1)
+    pickle.dump([x.text for x in fail[700:1000]], open("failTest.pickle", 'w'), -1)
+
+    projects = [p for p in succ[:700]]
+    projects.extend([p for p in fail[:700]])
+    projects.extend([p for p in succ[700:1000]])
+    projects.extend([p for p in fail[700:1000]])
+    
+
+    #cats = set([p.category for p in projects])
+    #print cats
+    #print minDate
+    #print maxDate
 
     #categoryAltruisticPropTest(projects)
     #basicStats(projects)
@@ -658,7 +682,7 @@ def main():
     #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
     #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
     #                            counts=False)
-    #saveFeatureMatrixAndHeaders(projects, "all90Filter.mtx", "allHeaders90Filter.csv", control=False)
+    saveFeatureMatrixAndHeaders(projects, "musicSmall.mtx", "musicSmall.csv", counts=False)
 
     #target = np.zeros([len(projects), 1], dtype=np.int)
     
