@@ -111,8 +111,9 @@ def main():
         if bar.test(docCount, len(docSents)): bar += 1
         numTokens = sum([len(s.split()) for s in curSents])
         probs.append(emissionProb(startProb, transProb, curSents, lms) / numTokens)
+        docCount += 1
     bar.clear()
     with open(outFile,'w') as f:
-        f.write(','.join(probs) + "\n")
+        f.write(','.join([str(p) for p in probs]) + "\n")
 if __name__ == "__main__":
     main()
