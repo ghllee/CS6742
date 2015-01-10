@@ -16,9 +16,10 @@ from collections import Counter, defaultdict
 import regexStore
 import os
 
+#for music data, 3000, .002
 class ContentModel:
     def __init__(self, langModel = 'bigram',
-                 numClusters = 5,#3000,
+                 numClusters = 3000,
                  minProportion = .002,
                  clusterTrainProp = 1, 
                  d1 = .00000005,
@@ -46,9 +47,6 @@ class ContentModel:
     def train(self, documentsIn):
         if not os.path.exists(self.name):
             os.makedirs(self.name)
-        #os.system("cd " + self.name)
-        #os.system("rm -rf *")
-        #os.system("cd ..")
         if self.langModel is not 'bigram': warnings.warn("Language model unsupported, using bigram")
         bar = LoadBar(30)
         random.shuffle(documentsIn)
@@ -154,9 +152,14 @@ class ContentModel:
 
             print "Saving model..."
             for cluster, model in self.lms.iteritems():
-                with open(self.name + "/" + str(cluster) + ".lm", 'w') as f:
-                    print cluster
-                    pickle.dump(model, f, -1)
+                if cluster == -1:
+                    with open(self.name + "/etcWordToIndex.pickle",'w') as f:
+                        pickle.dump(model.wordToIndex, f, -1)
+                    with open(self.name + "/etcMatrix.npy", 'w') as f:
+                        np.save(f, model.oneMinusMaxPsiMatrix)
+                else:
+                    with open(self.name + "/" + str(cluster) + ".lm", 'w') as f:
+                        pickle.dump(model, f, -1)
             with open(self.name + '/' + "transProbs", 'w') as f:
                 pickle.dump(self.transProbs, f, -1)
             if newClusters == clusters:
@@ -167,13 +170,13 @@ class ContentModel:
         docDict = defaultdict(list)
         for i in range(len(self.cleanSents)):
             docDict[self.cleanSents[i][1]].append((self.cleanSents[i][0], clusters[i]))
-        with open(self.name + "docPathsOut.txt",'w') as f:
+        with open(self.name + "/docPathsOut.txt",'w') as f:
             for doc, sentsClusters in docDict.iteritems():
                 for sc in sentsClusters:
                     f.write(str(sc))
                 f.write("\n")
 
-        with open(self.name + "clustersOut.txt",'w') as f:
+        with open(self.name + "/clustersOut.txt",'w') as f:
             for i in range(len(self.cleanSents)):
                 clustSent = defaultdict(list)
                 for i in range(len(self.cleanSents)): 

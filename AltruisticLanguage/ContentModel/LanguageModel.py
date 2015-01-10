@@ -25,6 +25,9 @@ class LanguageModel:
         pass
 
 class ETCBigramModel(LanguageModel):
+    def __init__(self):
+        '''Argumentless version for classification purposes.'''
+        pass
     def setParams(self, parameters):
         '''Here, we expect parameters in the form ([otherLM1, otherLM2, ...]) where
         the other LMs are REQUIRED to have the function bigramProb(bigram)'''
@@ -56,6 +59,8 @@ class ETCBigramModel(LanguageModel):
         self.loader.clear()
 
     def bigramProb(self, bigram):
+        if bigram[0] not in self.wordToIndex or bigram[1] not in self.wordToIndex:
+            return .000000000001
         numer = self.oneMinusMaxPsiMatrix[self.wordToIndex[bigram[0]],
                                           self.wordToIndex[bigram[1]]]
         denom = self.getDenom(bigram[0])
