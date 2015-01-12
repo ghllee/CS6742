@@ -17,10 +17,12 @@ import regexStore
 import os
 
 #for music data, 3000, .002
+#succ 1415, .004 -> 33 clusters
+#fail 1350, .004 -> 32 clusters
 class ContentModel:
     def __init__(self, langModel = 'bigram',
-                 numClusters = 3000,
-                 minProportion = .002,
+                 numClusters = 1350,
+                 minProportion = .004,
                  clusterTrainProp = 1, 
                  d1 = .00000005,
                  d2 = .001,
@@ -44,27 +46,11 @@ class ContentModel:
         self.lms = None
         self.transProbs = None
 
-    def train(self, documentsIn):
+    def train(self):
         if not os.path.exists(self.name):
             os.makedirs(self.name)
         if self.langModel is not 'bigram': warnings.warn("Language model unsupported, using bigram")
         bar = LoadBar(30)
-        random.shuffle(documentsIn)
-        if self.cleanSents is None:
-            print "Parsing/cleaning sentences"
-            self.cleanSents = []
-            bar.setup()
-            for i in range(len(documentsIn)):
-                if bar.test(i, len(documentsIn)): bar += 1
-                d = documentsIn[i]
-                sents = [( self.cleanSentence(x, properNames = "name"*4, numbers = "num"*4) , i)
-                         for x in self.stringToSentences(d)]
-                self.cleanSents.extend(sents)
-            bar.clear()
-            if self.saveFile is not None:
-                print "Saving cleaned sentences to " + self.saveFile
-                with open(self.saveFile, 'w') as f:
-                    pickle.dump(self.cleanSents, f, -1)
 
         print "There were " + str(len(self.cleanSents)) + " sentences."
         self.cleanSents = self.cleanSents[:int(np.floor(len(self.cleanSents)*self.clusterTrainProp))]
@@ -280,31 +266,18 @@ class ContentModel:
         return [y for y in x if len(y.split()) >= 1] 
 
 def main():
-    if len(sys.argv) == 1:
-        print "must have argument"
+    if len(sys.argv) != 3:
+        print "must have arguments of form [clean load file] [model name]"
         quit()
-    elif len(sys.argv) == 2:
-        loadFile = sys.argv[1]
-        loadFileClean = None
-    elif len(sys.argv) == 3:
-        loadFile = sys.argv[1]
-        loadFileClean = sys.argv[2]
-    else:
-        loadFile, loadFileClean, modelName = sys.argv[1:4]
+    loadFileClean, modelName = sys.argv[1:3]
     
-    with open(loadFile) as f:
-        data = pickle.load(f)
-    dataClean = None
-    if loadFileClean is not None:
-        with open(loadFileClean) as f:
-            dataClean = pickle.load(f)
-    data = [x for x in data if len(x.strip().split()) > 4]
-    if dataClean is not None:
-        dataClean = [x for x in dataClean if len(x[0].strip().split()) > 4]
+    
+    with open(loadFileClean) as f:
+        dataClean = pickle.load(f)
+    dataClean = [x for x in dataClean if len(x[0].strip().split()) > 4]
 
-    print sys.argv[2]
     x = ContentModel(cleanSents = dataClean, name=modelName)
-    x.train(data)
+    x.train()
 
 def main2():
     documentsIn = pickle.load(open(sys.argv[1]))

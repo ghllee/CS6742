@@ -25,9 +25,9 @@ class LanguageModel:
         pass
 
 class ETCBigramModel(LanguageModel):
-    def __init__(self):
-        '''Argumentless version for classification purposes.'''
-        pass
+    #def __init__(self):
+    #    '''Argumentless version for classification purposes.'''
+    #    pass
     def setParams(self, parameters):
         '''Here, we expect parameters in the form ([otherLM1, otherLM2, ...]) where
         the other LMs are REQUIRED to have the function bigramProb(bigram)'''

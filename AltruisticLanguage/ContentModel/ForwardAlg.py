@@ -55,7 +55,7 @@ def loadContentClusters(folder):
     clusters.'''
     returnDict = {}
     for i in os.listdir(folder):
-        if i.endswith(".lm"):
+        if i.endswith(".lm") and i.split(".")[0] != '-1':
             with open(folder + "/" + i) as f:
                 returnDict[int(i.split(".")[0])] = pickle.load(f)
         else:
