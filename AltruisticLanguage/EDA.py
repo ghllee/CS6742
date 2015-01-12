@@ -413,7 +413,7 @@ def getValidGrams(projects, minOccur = 50, nGram = 3):
 
     return validGrams
 
-def extractTextFeatures(projects, minOccur = 10, nGram = 2, counts=False):
+def extractTextFeatures(projects, minOccur = 5, nGram = 2, counts=False):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category. If counts = True, then the return matrix has counts features, if counts=False, then the return matrix has binary indicators'''
     #dict mapping from category -> set of n grams in that category
     catGramDict = defaultdict(set)
@@ -434,11 +434,11 @@ def extractTextFeatures(projects, minOccur = 10, nGram = 2, counts=False):
         print "Extracting " + str(n) + "-grams"
         for p in projects:
             nGrams = myGramFun(p.text, n)
-            for r in p.rewards:
-                nGrams.extend(myGramFun(r.text,n))
-            for f in p.faqs:
-                nGrams.extend(myGramFun(f.question,n))
-                nGrams.extend(myGramFun(f.answer,n))
+            #for r in p.rewards:
+            #    nGrams.extend(myGramFun(r.text,n))
+            #for f in p.faqs:
+            #    nGrams.extend(myGramFun(f.question,n))
+            #    nGrams.extend(myGramFun(f.answer,n))
             for g in nGrams:
                 nGramCounter[g] += 1
                 gramCatCounter[p.category][g] += 1
@@ -646,8 +646,10 @@ def main():
     #minDate = min([p.startDate for p in projects])
     #maxDate = max([p.endDate for p in projects])
     
+    train = 400
+    test = 600
     catDict = buildCategoryDictionary(projects)
-    music = catDict["Music"]
+    music = catDict["Photography"]
     succ = [p for p in music if p.backers != 0
             and
             1.*(p.backers - sum([y.numBackers for y in 
@@ -656,15 +658,18 @@ def main():
             or
             1.*(p.backers - sum([y.numBackers for y in 
                                  p.rewards]))/(1.0*p.backers)<=.1 if len(p.text) > 0]
-    pickle.dump([x.text for x in succ[:700]], open("succTrain.pickle", 'w'), -1)
-    pickle.dump([x.text for x in fail[:700]], open("failTrain.pickle", 'w'), -1)
-    pickle.dump([x.text for x in succ[700:1000]], open("succTest.pickle", 'w'), -1)
-    pickle.dump([x.text for x in fail[700:1000]], open("failTest.pickle", 'w'), -1)
 
-    projects = [p for p in succ[:700]]
-    projects.extend([p for p in fail[:700]])
-    projects.extend([p for p in succ[700:1000]])
-    projects.extend([p for p in fail[700:1000]])
+    print len(succ)
+    print len(fail)
+    pickle.dump([x.text for x in succ[:train]], open("succTrainPhoto.pickle", 'w'), -1)
+    pickle.dump([x.text for x in fail[:train]], open("failTrainPhoto.pickle", 'w'), -1)
+    pickle.dump([x.text for x in succ[train:test]], open("succTestPhoto.pickle", 'w'), -1)
+    pickle.dump([x.text for x in fail[train:test]], open("failTestPhoto.pickle", 'w'), -1)
+
+    projects = [p for p in succ[:train]]
+    projects.extend([p for p in fail[:train]])
+    projects.extend([p for p in succ[train:test]])
+    projects.extend([p for p in fail[train:test]])
     
 
     #cats = set([p.category for p in projects])
@@ -682,7 +687,8 @@ def main():
     #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
     #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
     #                            counts=False)
-    saveFeatureMatrixAndHeaders(projects, "musicSmall.mtx", "musicSmall.csv", counts=False)
+    #saveFeatureMatrixAndHeaders(projects, "musicSmall.mtx", "musicSmall.csv", counts=False)
+    saveFeatureMatrixAndHeaders(projects, "photoSmall.mtx", "photoSmall.csv", counts=False)
 
     #target = np.zeros([len(projects), 1], dtype=np.int)
     
