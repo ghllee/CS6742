@@ -57,7 +57,7 @@ predLangControl <- predict(holdoutLangControl,
                            type='class')
 
 predTotal <- predict(holdoutTotal,
-                     data[(train+1):nrow(data), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
+                     data[(train+1):nrow(data), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess"))],
                      type='class')
 
 topBottomK <- function(cvReg, k) {
