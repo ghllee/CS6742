@@ -3,93 +3,62 @@ library('Matrix')
 library('glmnet')
 library('foreach')
 library('doParallel')
-library('AUC')
 registerDoParallel()
 rsort <- function(x) {
   sort(x, decreasing = TRUE)
 }
 setwd("regressionData")
-dataSW <- readMM("all90Filter.mtx")
-headersSW <- read.csv("allHeaders90Filter.csv")
-dataNoSW <- readMM("all90FilternoSW.mtx")
-headersNoSW <- read.csv("allHeaders90FilternoSW.csv")
-dataControl <- readMM("allControls.mtx")
-headersControl <- read.csv("allControlHeaders.csv")
+data <- readMM("all.mtx")
+headers <- read.csv("all.csv")
 setwd("..")
 
-colnames(dataSW) <- colnames(headersSW)
-colnames(dataNoSW) <- colnames(headersNoSW)
+colnames(data) <- colnames(headers)
 colnames(dataControl) <- colnames(headersControl)
 
-#dataControlTest2 <- dataControl[which(dataControl[,c("numBackers")]>=20),]
-#target2 <- dataControl[which(dataControl[,c("numBackers")]>=20),c("numBackers", "numAltruistic")]
-#target2 <- target2[,2]/target2[,1]
-
-target <- dataControl[,c("numBackers", "numAltruistic")]
+target <- data[,c("numBackers", "numAltruistic")]
 target <- target[,2]/target[,1]
 target[is.nan(target)] <- 0
 target <- target > .1
 
-control <- cv.glmnet(dataControl[,-which(colnames(dataControl) %in% c("numBackers","numAltruistic", "Osuccess"))], target,
+control <- cv.glmnet(data[,c(-grep("^T|^L", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))], target,
               family = "binomial",
               type.measure = "class",
               alpha = 1, parallel = T)
 
-noSW <- cv.glmnet(dataNoSW[,-which(colnames(dataNoSW) %in% c("numBackers","numAltruistic", "Osuccess"))], target,
+langControl <- cv.glmnet(data[,c(-grep("^T", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))], target,
+                         family = "binomial",
+                         type.measure = "class",
+                         alpha = 1, parallel = T)
+
+total <- cv.glmnet(data[,-which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess"))], target,
                 family = "binomial",
                 type.measure = "class",
                 alpha = 1, parallel = T)
 
-SW <- cv.glmnet(dataSW[,-which(colnames(dataSW) %in% c("numBackers","numAltruistic", "Osuccess"))], target,
-                family = "binomial",
-                type.measure = "class",
-                alpha = 1, parallel = T)
+train <- 40000
 
-#test2 <- cv.glmnet(dataControlTest2[,-which(colnames(dataControlTest2) %in% c("numAltruistic"))], target2, family='gaussian', alpha=1, parallel = T)
+holdoutControl <- cv.glmnet(data[1:train,c(-grep("^T|^L", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
+                        target[1:train], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
 
-holdoutNoSW <- cv.glmnet(dataNoSW[1:40000,-which(colnames(dataNoSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
-                       target[1:40000], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
+holdoutLangControl <- cv.glmnet(data[1:train,c(-grep("^T", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
+                        target[1:train], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
 
-holdoutSW <- cv.glmnet(dataSW[1:40000,-which(colnames(dataSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
-                       target[1:40000], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
-
-holdoutControl <- cv.glmnet(dataControl[1:40000,-which(colnames(dataControl) %in% c("numBackers","numAltruistic", "Osuccess"))],
-                            target[1:40000], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
+holdoutTotal <- cv.glmnet(dataControl[1:train,-which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess"))],
+                              target[1:train], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
 
 
-print("No SW Holdout Accuracy")
-sum(predict(holdoutNoSW,
-            dataNoSW[40001:nrow(dataNoSW),-which(colnames(dataNoSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
+predControl <- predict(holdoutControl,
+            data[(train+1):nrow(data),c(-grep("^T|^L", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
             type='class')
-    == target[40001:nrow(dataNoSW)])/(length(target[40001:nrow(dataNoSW)]))
 
-print("SW Holdout Accuracy")
-pred <- predict(holdoutSW,
-                dataSW[40001:nrow(dataSW),-which(colnames(dataSW) %in% c("numBackers","numAltruistic", "Osuccess"))],
-                type='class')
-sum(pred == target[40001:nrow(dataSW)])/(length(target[40001:nrow(dataSW)]))
-posCor <- sum(pred[target[40001:nrow(dataSW)]==1] == target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==1])
-negCor <- sum(pred[target[40001:nrow(dataSW)]==0] == target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==0])
-posFail <- sum(pred[target[40001:nrow(dataSW)]==1] != target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==1])
-negFail <- sum(pred[target[40001:nrow(dataSW)]==0] != target[40001:nrow(dataSW)][target[40001:nrow(dataSW)]==0])
-print("Percision")
-posCor/(posCor + negFail)
-print("Recall")
-posCor/(posCor + posFail)
+predLangControl <- predict(holdoutLangControl,
+                           data[(train+1):nrow(data),
+                                    c(-grep("^T", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
+                           type='class')
 
-print("Control Holdout Accuracy")
-pred <- predict(holdoutControl,
-            dataControl[40001:nrow(dataControl),-which(colnames(dataControl) %in% c("numBackers","numAltruistic", "Osuccess"))],
-            type='class')
-sum(pred == target[40001:nrow(dataControl)])/(length(target[40001:nrow(dataControl)]))
-posCor <- sum(pred[target[40001:nrow(dataControl)]==1] == target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==1])
-negCor <- sum(pred[target[40001:nrow(dataControl)]==0] == target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==0])
-posFail <- sum(pred[target[40001:nrow(dataControl)]==1] != target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==1])
-negFail <- sum(pred[target[40001:nrow(dataControl)]==0] != target[40001:nrow(dataControl)][target[40001:nrow(dataControl)]==0])
-print("Percision")
-posCor/(posCor + negFail)
-print("Recall")
-posCor/(posCor + posFail)
+predTotal <- predict(holdoutTotal,
+                     data[(train+1):nrow(data), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
+                     type='class')
 
 topBottomK <- function(cvReg, k) {
   bestlambda<-cvReg$lambda.min
@@ -103,6 +72,24 @@ topBottomK <- function(cvReg, k) {
   print(apply(myCoefMatrix, 2, rsort)[1:k,])
 }
 
+checkModel <- function(pred) { 
+  print("Accuracy")
+  print(sum(pred == target[(train+1):nrow(data)])/(length(target[(train+1):nrow(data)])))
+  posCor <- sum(pred[target[(train+1):nrow(data)]==1] == target[(train+1):nrow(data)][target[(train+1):nrow(data)]==1])
+  negCor <- sum(pred[target[(train+1):nrow(data)]==0] == target[(train+1):nrow(data)][target[(train+1):nrow(data)]==0])
+  posFail <- sum(pred[target[(train+1):nrow(data)]==1] != target[(train+1):nrow(data)][target[(train+1):nrow(data)]==1])
+  negFail <- sum(pred[target[(train+1):nrow(data)]==0] != target[(train+1):nrow(data)][target[(train+1):nrow(data)]==0])
+  perc <- posCor/(posCor + negFail)
+  rec <- posCor/(posCor + posFail)
+  f <- 2 * perc * rec / (perc + rec)
+  print("Percision")
+  print(perc)
+  print("Recall")
+  print(rec)
+  print("F-measure")
+  print(f)
+}
+
 orderedCoefs <- function(cvReg) {
   bestlambda<-cvReg$lambda.min
   mse.min <- cvReg$cvm[cvReg$lambda == bestlambda]
@@ -112,9 +99,13 @@ orderedCoefs <- function(cvReg) {
   return(apply(myCoefMatrix, 2, sort))
 }
 
+
+checkModel(predControl)
+checkModel(predLangControl)
+
 topK <- 50
 topBottomK(control, topK)
-topBottomK(noSW, topK)
+topBottomK(langControl, topK)
 topBottomK(SW, topK)
 topBottomK(test2, topK)
 write.table(orderedCoefs(SW), file = "testFile.csv")
