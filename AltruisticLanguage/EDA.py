@@ -413,7 +413,7 @@ def getValidGrams(projects, minOccur = 50, nGram = 3):
 
     return validGrams
 
-def extractTextFeatures(projects, minOccur = 5, nGram = 2, counts=False):
+def extractTextFeatures(projects, minOccur = 10, nGram = 3, counts=False):
     '''Given a list of projects, a minimum number of occurances, and maximum sized n-gram of interest, return a |projects| x |features| n-gram count matrix and list of n-grams in the order represented, given that the selected features appear in a least minOccur projects and at least once in every category. If counts = True, then the return matrix has counts features, if counts=False, then the return matrix has binary indicators'''
     #dict mapping from category -> set of n grams in that category
     catGramDict = defaultdict(set)
@@ -434,11 +434,11 @@ def extractTextFeatures(projects, minOccur = 5, nGram = 2, counts=False):
         print "Extracting " + str(n) + "-grams"
         for p in projects:
             nGrams = myGramFun(p.text, n)
-            #for r in p.rewards:
-            #    nGrams.extend(myGramFun(r.text,n))
-            #for f in p.faqs:
-            #    nGrams.extend(myGramFun(f.question,n))
-            #    nGrams.extend(myGramFun(f.answer,n))
+            for r in p.rewards:
+                nGrams.extend(myGramFun(r.text,n))
+            for f in p.faqs:
+                nGrams.extend(myGramFun(f.question,n))
+                nGrams.extend(myGramFun(f.answer,n))
             for g in nGrams:
                 nGramCounter[g] += 1
                 gramCatCounter[p.category][g] += 1
@@ -459,8 +459,8 @@ def extractTextFeatures(projects, minOccur = 5, nGram = 2, counts=False):
         for cat, catCount in catCounter.iteritems():
             perDocList.append((gramCatCounter[cat][v]*.1)/catCount)
         gramToVar[v] = 1.0*(np.max(perDocList)-np.min(perDocList))/np.max(perDocList)
-    #validGrams = [x[0] for x in
-    #              sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
+    validGrams = [x[0] for x in
+                  sorted(gramToVar.items(), key = operator.itemgetter(1))[:int(.9*len(gramToVar))]]
 
     
     print "Using {} n-grams".format(len(validGrams))
@@ -512,7 +512,6 @@ def extractGivenTextFeatures(projects, inFile, counts=False):
                     else:
                         returnMatrix[i,nGramMap[k]] = 1
     return returnMatrix, myNGrams
-    
 
 
 def getNGrams(stringIn, n, toLower = True, removePunct = False):
@@ -562,17 +561,67 @@ def crossValidate(dataMatrix, target, k=5):
 
     return aveAcc/k
 
+def getEntropy(text, unigrams):
+    '''Given a text document and a list of unigrams of interest, returns the entropy of the
+    distribution of the unigrams.'''
+    uniGrams = getNGrams(text, 1, toLower = True, removePunct = True)
+    uniDist = Counter(uniGrams)
+    docLen = len(uniGrams)
+    entropy = 0
+    for u in unigrams:
+        if uniDist[u] == 0: continue
+        p = (uniDist[u] * 1.)/docLen
+        entropy += -p*np.log2(p)
+    return entropy
+
+def getTextControlFeatures(projects):
+    '''Given a list of projects, return a matrix of text control features.'''
+    features = ['length', 'entropy100', 'entropy1000', 'tokenToType']
+    returnMatrix = np.zeros([len(projects),len(features)], dtype = np.float32)
+
+    computeEntropy = False
+    for f in features:
+        if 'entropy' in f:
+            computeEntropy = True
+    
+    if computeEntropy == True:
+        unigramCounter = Counter()
+        for p in projects:
+            unigramCounter.update(getNGrams(p.text, 1, toLower = True, removePunct = True))
+        topThousand = [x[0] for x
+                       in sorted(unigramCounter.items(), key=operator.itemgetter(1))[:1000:-1]]
+    for i in range(len(features)):
+        curFeature = features[i]
+        for j in range(len(projects)):
+            if curFeature == 'length':
+                returnMatrix[j,i] = len(getNGrams(projects[j].text,
+                                                  1, toLower = True, removePunct = True))
+            elif curFeature == 'entropy100':
+                returnMatrix[j,i] = getEntropy(projects[j].text, topThousand[:100])
+            elif curFeature == 'entropy1000':
+                returnMatrix[j,i] = getEntropy(projects[j].text, topThousand)
+            elif curFeature == 'tokenToType':
+                unigrams = getNGrams(projects[j].text,
+                                     1, toLower = True, removePunct = True)
+                if len(unigrams) == 0: returnMatrix[j,i] = 0
+                else: returnMatrix[j,i] = (len(set(unigrams)) * 1.)/len(unigrams)
+            else:
+                print curFeature + " is not implemented"
+
+    return returnMatrix, features
+
 def saveFeatureMatrixAndHeaders(projects, matrixOut, headersOut,
                                 control = False, given = None, counts = True):
     '''Given a list of projects, filenames for the output matrix/target/header data, and whether or not you just want the control matrix, outputs the requested data to the requested files.'''
     if not control:
         if given is None:
-            featureMatrix1, ngrams = extractTextFeatures(projects, counts=counts)
+            featureMatrix1, ngrams = extractTextFeatures(projects, counts=counts, minOccur = 10)
         else:
             featureMatrix1, ngrams = extractGivenTextFeatures(projects, given, counts=counts)
     featureMatrix2, cats = getCategoryControlFeatures(projects)
     featureMatrix3, controls = getExtraControlFeatures(projects)
-    
+    featureMatrix4, langControls = getTextControlFeatures(projects)
+
     numBackers = np.zeros([len(projects), 1], dtype=np.int)
     numAltruistic = np.zeros([len(projects), 1], dtype=np.int)
     numBackers[:,0] = np.array([p.backers for p in projects])
@@ -582,26 +631,31 @@ def saveFeatureMatrixAndHeaders(projects, matrixOut, headersOut,
     if not control: ngrams = ['T' + g for g in ngrams]
     cats = ['C' + c for c in cats]
     controls = ['O' + o for o in controls]
+    langControls = ['L' + l for l in langControls]
     targets = ["numBackers, numAltruistic"]
 
     if not control:
         data = np.concatenate([featureMatrix1,
                                featureMatrix2,
                                featureMatrix3,
+                               featureMatrix4,
                                numBackers, 
                                numAltruistic],axis = 1)
     else:
         data = np.concatenate([featureMatrix2,
-                               featureMatrix3, numBackers, numAltruistic] ,axis = 1)
+                               featureMatrix3,
+                               featureMatrix4,
+                               numBackers, numAltruistic] ,axis = 1)
 
     if not control:
         headers = np.concatenate([ngrams,
                                   cats,
                                   controls,
+                                  langControls,
                                   targets])
     else:
         headers = np.concatenate([cats,
-                                  controls, targets])
+                                  controls, langControls, targets])
 
     sparseMatrix = csr_matrix(data)
     mmwrite(matrixOut, sparseMatrix)
@@ -646,30 +700,28 @@ def main():
     #minDate = min([p.startDate for p in projects])
     #maxDate = max([p.endDate for p in projects])
     
-    train = 400
-    test = 600
-    catDict = buildCategoryDictionary(projects)
-    music = catDict["Photography"]
-    succ = [p for p in music if p.backers != 0
-            and
-            1.*(p.backers - sum([y.numBackers for y in 
-                                 p.rewards]))/(1.0*p.backers)>.1 if len(p.text) > 0]
-    fail = [p for p in music if p.backers == 0
-            or
-            1.*(p.backers - sum([y.numBackers for y in 
-                                 p.rewards]))/(1.0*p.backers)<=.1 if len(p.text) > 0]
-
-    print len(succ)
-    print len(fail)
-    pickle.dump([x.text for x in succ[:train]], open("succTrainPhoto.pickle", 'w'), -1)
-    pickle.dump([x.text for x in fail[:train]], open("failTrainPhoto.pickle", 'w'), -1)
-    pickle.dump([x.text for x in succ[train:test]], open("succTestPhoto.pickle", 'w'), -1)
-    pickle.dump([x.text for x in fail[train:test]], open("failTestPhoto.pickle", 'w'), -1)
-
-    projects = [p for p in succ[:train]]
-    projects.extend([p for p in fail[:train]])
-    projects.extend([p for p in succ[train:test]])
-    projects.extend([p for p in fail[train:test]])
+    #train = 400
+    #test = 600
+    #catDict = buildCategoryDictionary(projects)
+    #music = catDict["Photography"]
+    #succ = [p for p in music if p.backers != 0
+    #        and
+    #        1.*(p.backers - sum([y.numBackers for y in 
+    #                             p.rewards]))/(1.0*p.backers)>.1 if len(p.text) > 0]
+    #fail = [p for p in music if p.backers == 0
+    #        or
+    #        1.*(p.backers - sum([y.numBackers for y in 
+    #                             p.rewards]))/(1.0*p.backers)<=.1 if len(p.text) > 0]
+    #print len(succ)
+    #print len(fail)
+    #pickle.dump([x.text for x in succ[:train]], open("succTrainPhoto.pickle", 'w'), -1)
+    #pickle.dump([x.text for x in fail[:train]], open("failTrainPhoto.pickle", 'w'), -1)
+    #pickle.dump([x.text for x in succ[train:test]], open("succTestPhoto.pickle", 'w'), -1)
+    #pickle.dump([x.text for x in fail[train:test]], open("failTestPhoto.pickle", 'w'), -1)
+    #projects = [p for p in succ[:train]]
+    #projects.extend([p for p in fail[:train]])
+    #projects.extend([p for p in succ[train:test]])
+    #projects.extend([p for p in fail[train:test]])
     
 
     #cats = set([p.category for p in projects])
@@ -687,8 +739,10 @@ def main():
     #saveFeatureMatrixAndHeaders(projects, "dataBinaryTheirs.mtx",
     #                            "target.csv", "headersTheirs.csv", given="KS.predicts",
     #                            counts=False)
+    saveFeatureMatrixAndHeaders(projects, "allControl.mtx", "allControl.csv", counts=False,
+                                control = True)
     #saveFeatureMatrixAndHeaders(projects, "musicSmall.mtx", "musicSmall.csv", counts=False)
-    saveFeatureMatrixAndHeaders(projects, "photoSmall.mtx", "photoSmall.csv", counts=False)
+    #saveFeatureMatrixAndHeaders(projects, "photoSmall.mtx", "photoSmall.csv", counts=False)
 
     #target = np.zeros([len(projects), 1], dtype=np.int)
     

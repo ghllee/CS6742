@@ -35,6 +35,8 @@ total <- cv.glmnet(data[,-which(colnames(data) %in% c("numBackers","numAltruisti
                 type.measure = "class",
                 alpha = 1, parallel = T)
 
+
+######
 train <- 40000
 
 holdoutControl <- cv.glmnet(data[1:train,c(-grep("^T|^L", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
@@ -43,7 +45,7 @@ holdoutControl <- cv.glmnet(data[1:train,c(-grep("^T|^L", colnames(data)), -whic
 holdoutLangControl <- cv.glmnet(data[1:train,c(-grep("^T", colnames(data)), -which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess")))],
                         target[1:train], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
 
-holdoutTotal <- cv.glmnet(dataControl[1:train,-which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess"))],
+holdoutTotal <- cv.glmnet(data[1:train,-which(colnames(data) %in% c("numBackers","numAltruistic", "Osuccess"))],
                               target[1:train], family = "binomial", type.measure = "class", alpha = 1, parallel = T)
 
 
@@ -82,7 +84,7 @@ checkModel <- function(pred) {
   perc <- posCor/(posCor + negFail)
   rec <- posCor/(posCor + posFail)
   f <- 2 * perc * rec / (perc + rec)
-  print("Percision")
+  print("Precision")
   print(perc)
   print("Recall")
   print(rec)
@@ -102,10 +104,8 @@ orderedCoefs <- function(cvReg) {
 
 checkModel(predControl)
 checkModel(predLangControl)
+checkModel(predTotal)
 
 topK <- 50
-topBottomK(control, topK)
-topBottomK(langControl, topK)
-topBottomK(SW, topK)
-topBottomK(test2, topK)
-write.table(orderedCoefs(SW), file = "testFile.csv")
+topBottomK(total, topK)
+write.table(orderedCoefs(total), file = "orderedCoefs")
